@@ -8,8 +8,7 @@
 #ifndef PASTA_MODULE_H
 #define PASTA_MODULE_H
 
-static const int NAME_MAX_CHARS = 100;
-static const int COMMAND_MAX_CHARS = 1000;
+#include <stdarg.h>
 
 enum ModuleState
 {
@@ -17,16 +16,41 @@ enum ModuleState
     Stopped
 };
 
-typedef struct ModuleState ModuleState;
+typedef enum ModuleState ModuleState;
 
 struct Module 
 {
-    char name[NAME_MAX_CHARS + 1];
+    char *name;
+    char *command;
     int interval_seconds;
-    char command[COMMAND_MAX_CHARS + 1];
     ModuleState state;
 };
 
 typedef struct Module Module;
+
+/*
+ * pasta_module_create
+ *
+ * Allocates a new Module struct instance and returns a pointer to it.
+ *
+ * Allocates space for name and command members in the Module struct.
+ *
+ * A call to pasta_module_create should always be paired with a call to
+ * pasta_module_destroy
+ */
+Module *pasta_module_create();
+
+/*
+ * Frees the memory allocated for the provided module, as well as the memory
+ * allocated for the name and command members.
+ */
+void pasta_module_destroy(Module *const module_p);
+
+void pasta_module_set_name(Module *const module_p, const char *name);
+void pasta_module_set_command(Module *const module_p, const char *command);
+void pasta_module_set_interval(Module *const module_p, int interval);
+void pasta_module_set_state(Module *const module_p, ModuleState state);
+
+void pasta_module_print(const Module *const module_p);
 
 #endif /* PASTA_MODULE_H */

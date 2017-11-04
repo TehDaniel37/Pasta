@@ -8,6 +8,7 @@
     { \
         if ((test)) \
         { \
+            printf("Assertion succeeded for %s()\n", __func__); \
             tests_completed++; \
         } \
         else \

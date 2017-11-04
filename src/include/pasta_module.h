@@ -32,6 +32,12 @@ struct Module
 
 typedef struct Module Module;
 
+#ifdef TEST
+#include <stddef.h> // size_t
+
+void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes);
+#endif
+
 /*
  * pasta_module_create
  *

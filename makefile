@@ -1,27 +1,27 @@
 CC = gcc
 TARGET = pasta
 
-# Debug variables
-debug_flags = -g -Wall -pedantic
-debug_target_dir = bin/debug
-
-# Release variables
+# Compiler flags
+debug_flags = -g -Wall -pedantic -Werror
 release_flags = -O
-release_target_dir = bin/release
+test_flags = $(debug_flags) -DTEST
 
+# Directories
+debug_target_dir = bin/debug
+release_target_dir = bin/release
+test_target_dir = bin/debug/test
 target_dir = $(debug_target_dir)
-object_dir = obj
-src_dir = src/main
 include_dir = src/include
+src_dir = src/main
+test_dir = src/test
+object_dir = obj
+test_object_dir = obj/test
+test_resource_dir = res/debug/test
+
+# Files
 sources := $(shell find $(src_dir) -name '*.c')
 objects := $(patsubst $(src_dir)/%.c, $(object_dir)/%.o, $(sources))
 headers := $(shell find $(include_dir) -name '*.h')
-
-# Test variables
-test_target_dir = bin/debug/test
-test_object_dir = obj/test
-test_dir = src/test
-test_resource_dir = res/debug/test
 tests := $(shell find $(test_dir) -name '*.c')
 test_targets := $(patsubst $(test_dir)/%.c, $(test_target_dir)/%, $(tests))
 test_objects := $(filter-out $(object_dir)/main.o, $(objects))
@@ -63,7 +63,7 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
 
 .PHONY: test
-test: CFLAGS=$(debug_flags)
+test: CFLAGS=$(test_flags)
 test: create_dirs $(test_objects) $(test_targets)
 	@for file in $(test_targets); do ./$$file; done
 

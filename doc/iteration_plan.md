@@ -11,7 +11,7 @@ The program should run the loaded modules in parallell. Each module should be ex
 
 ### Time estimation
 
-####Loading of configuration files
+#### Loading of configuration files
 | Task                                    | estimation             |
 | --------------------------------------- | ---------------------- |
 | Decide on configuration format          | 1 hour                 |
@@ -19,12 +19,12 @@ The program should run the loaded modules in parallell. Each module should be ex
 | Implement loading of configuration file | 30 minutes             |
 | Implement parsing of configuration file | 2 hours                |
 | Write tests for *ConfigParser*          | 1 hour                 |
-| **Total**                               | **5 hours 30 minutes** |
+| **Total**                              | **5 hours 30 minutes** |
 
 #### Implement starting and stopping modules
 | Task                                    | estimation             |
 | --------------------------------------- | ---------------------- |
-| Design *Scheduler*                      | 2 hour                 |
+| Design *Scheduler*                      | 2 hours                |
 | Implement *Scheduler*                   | 2 hour                 |
 | Write tests for *Scheduler*             | 1 hour                 |
 | **Total**                               | **5 hours**            |

@@ -8,12 +8,16 @@
 #ifndef PASTA_MODULE_H
 #define PASTA_MODULE_H
 
-#include <stdarg.h>
+#include "pasta_error.h"
+
+#define PASTA_MODULE_MAX_NAME_LEN 100
+#define PASTA_MODULE_MAX_CMD_LEN 1000
+#define PASTA_MODULE_STATE_VALUES 2
 
 enum ModuleState
 {
-    Running,
-    Stopped
+    Running = 0,
+    Stopped = 1
 };
 
 typedef enum ModuleState ModuleState;
@@ -44,13 +48,11 @@ Module *pasta_module_create();
  * Frees the memory allocated for the provided module, as well as the memory
  * allocated for the name and command members.
  */
-void pasta_module_destroy(Module *const module_p);
+Status pasta_module_destroy(Module *const module_p);
 
-void pasta_module_set_name(Module *const module_p, const char *name);
-void pasta_module_set_command(Module *const module_p, const char *command);
-void pasta_module_set_interval(Module *const module_p, int interval);
-void pasta_module_set_state(Module *const module_p, ModuleState state);
-
-void pasta_module_print(const Module *const module_p);
+Status pasta_module_set_name(Module *const module_p, const char *name);
+Status pasta_module_set_command(Module *const module_p, const char *command);
+Status pasta_module_set_interval(Module *const module_p, int interval);
+Status pasta_module_set_state(Module *const module_p, ModuleState state);
 
 #endif /* PASTA_MODULE_H */

@@ -1,0 +1,39 @@
+@startuml
+participant Main
+participant ConfigParser
+participant Scheduler
+
+activate Main
+Main->Scheduler: initialize()
+
+activate Scheduler
+Main<--Scheduler: done()
+deactivate Scheduler
+
+Main->ConfigParser: load(filepath)
+
+activate ConfigParser
+ConfigParser->ConfigParser: open(filepath)
+ConfigParser->ConfigParser: parse general configurations
+loop for module in file
+    ConfigParser->ConfigParser: parse module configuration
+    create Module
+    ConfigParser->Module: <<create>>
+
+end
+Main<--ConfigParser: modules
+deactivate ConfigParser
+
+loop for Module in modules
+    Main->Scheduler: start_module(module)
+
+    activate Scheduler
+    Scheduler->Scheduler: start new process
+    Scheduler->Scheduler: run module command
+    Main<--Scheduler: true
+    deactivate Scheduler
+
+end
+
+Main->Main: pause()
+@enduml

@@ -35,20 +35,21 @@ typedef struct Module Module;
 #ifdef TEST
 #include <stddef.h> // size_t
 
-void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes);
+void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes));
 #endif
 
 /*
  * pasta_module_create
  *
- * Allocates a new Module struct instance and returns a pointer to it.
+ * Allocates a new Module struct instance and points the provided Module pointer
+ * to it.
  *
  * Allocates space for name and command members in the Module struct.
  *
  * A call to pasta_module_create should always be paired with a call to
  * pasta_module_destroy
  */
-Module *pasta_module_create();
+Status pasta_module_create(Module *module_p);
 
 /*
  * Frees the memory allocated for the provided module, as well as the memory

@@ -1,6 +1,5 @@
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
+#include <stdlib.h> // malloc
+#include <string.h> // strncmp
 
 #include "test.h"
 #include "pasta_error.h"
@@ -10,6 +9,8 @@
 #define STRING_101_CHARS "ysrCek0ygdDVOZ7TTfxkAorGfER1YJEQ0zsUvhAILtgN9mI3hfDiS3GQaOqOlXJQRzV4pPVDBYtSiKuPXh5o6GDA0xP5Q4wuBSWQe"
 #define COMMAND_INVALID_SYNTAX "while ture; do ehco 'hello there!'; dnoe"
 #define COMMAND_1001_CHARS "echo 'HAb6kJxzWH1OXvYzFlnCvPHvd2LbICMcIl8E9JwbbMGiAIwm2q1UGV91apjORHy9dM4NhFTxXmY9gL858pivwzEU1M1wRSEiNqyGe7p3Hjk3NfRUN0SdRISEkQZUWSphSFHrjQCPLMQrxapzsr8KLU95rzzCADyp28fONouI6ke8Hk6lHPImegBWHwZ4hFqVyASyfIpatfUWzafRIIVABkwF6diPFBl9RbFaocyHslWddgQEJTiMY3tjMm5kzNisqqw5t1KVagFMP2I3814Bv1iHjXevXt5oI65UFWbxKnItbFRfQ98f3kjP3Tiwl8BsJ6CGUz02GrmDc6sueTJoy1I35RWWWe0Ud0y4nW8134qsi5g26yO8g05hLyPF0TJ3uL4hArvE21doiLyATeuFkzgu5tTydNgjMEvprMMRAgmRvc4Cm0Lq7UCJCdk7C2Ox5PBRdQfFOlcJINHcPsV5GQPkuwqfplhes6s6zC2dx7F5suuEGAM0iEavjrFM24DxVmoeg2wU9D5F2XvWRDiHIgV6lFnnw3GbGdnFHwHOlS07bRxoDUzaKuaSizF55j2CmIJ6sMgu84l0AQZro7EyXmmYtUH5N4krgPlV1ZYwChVHiL14zYe3xkgbJA0aZ5Hr4ude8bEidVU7wWff7sbgr9SjzYj8zRBtRx8XaNcupgivf6fVj9cFHxzkvTL24IhZeVC07eqa4VzBGgOvd6plMG2lF4JUwTxawNfYxO3HWooumA2OwfVGlObE9KxNAGYshFpptJ5fDOAhmz0WRFVdBWFkWwtmxm80IWN2fOWM0UvgYu4O3booYAXhhv1eM6QMBb3aIUuKMyGSZzjtUMAPlQeiHUc7d3sR9YA4uynmYHNOoi5zrZLBppFRgkmtk2H02XVQUEH3Xn1S3xqbhshETzs3Cc03sPtBtm03LVnNBW9E9RdkJCu59OsFWrTpZGOYExLEfqi0WFBegL4dipZPzUHmiaNKorE7m9'"
+
+static void *mock_allocator(size_t bytes);
 
 static void set_name_should_return_null_argument_error_when_module_argument_is_null();
 static void set_name_should_return_null_argument_error_when_name_argument_is_null();
@@ -32,11 +33,12 @@ static void set_state_should_return_null_argument_error_when_module_argument_is_
 static void set_state_should_return_invalid_argument_error_when_state_argument_is_negative();
 static void set_state_should_return_invalid_argument_error_when_state_argument_is_out_of_range();
 
-static void create_should_return_malloc_error_if_memory_allocation_fails();
+static void create_should_return_invalid_argument_error_when_module_argument_is_not_null();
+static void create_should_return_malloc_fail_error_when_memory_allocation_fails();
 
-static void destroy_should_return_free_null_error_if_module_argument_is_null();
-static void destroy_should_return_free_null_error_if_module_name_is_null();
-static void destroy_should_return_free_null_error_if_module_command_is_null();
+static void destroy_should_return_free_null_error_when_module_argument_is_null();
+static void destroy_should_return_free_null_error_when_module_name_is_null();
+static void destroy_should_return_free_null_error_when_module_command_is_null();
 
 int main(void)
 {
@@ -61,15 +63,21 @@ int main(void)
     set_state_should_return_invalid_argument_error_when_state_argument_is_negative();
     set_state_should_return_invalid_argument_error_when_state_argument_is_out_of_range();
     
-    create_should_return_malloc_error_if_memory_allocation_fails();
+    create_should_return_malloc_fail_error_when_memory_allocation_fails();
+    create_should_return_invalid_argument_error_when_module_argument_is_not_null();
     
-    destroy_should_return_free_null_error_if_module_argument_is_null();
-    destroy_should_return_free_null_error_if_module_name_is_null();
-    destroy_should_return_free_null_error_if_module_command_is_null();
+    destroy_should_return_free_null_error_when_module_argument_is_null();
+    destroy_should_return_free_null_error_when_module_name_is_null();
+    destroy_should_return_free_null_error_when_module_command_is_null();
 
     test_print_summary(); 
 
     return EXIT_SUCCESS;
+}
+
+static void *mock_allocator(size_t bytes)
+{
+    return NULL;
 }
 
 static void set_name_should_return_null_argument_error_when_module_argument_is_null()
@@ -234,20 +242,35 @@ static void set_state_should_return_invalid_argument_error_when_state_argument_i
     test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
 }
 
-static void create_should_return_malloc_error_if_memory_allocation_fails()
+static void create_should_return_malloc_fail_error_when_memory_allocation_fails()
 {
-    // TODO: Implement hook to be able to specify which allocator to use
-    test_assert(false);
+    pasta_module_set_allocator(mock_allocator);
+    Module *module = NULL;
+
+    Status status = pasta_module_create(module);
+
+    test_assert(status == PASTA_ERROR_MALLOC_FAIL);
+
+    pasta_module_set_allocator(malloc);
 }
 
-static void destroy_should_return_free_null_error_if_module_argument_is_null()
+static void create_should_return_invalid_argument_error_when_module_argument_is_not_null()
+{
+    Module module;
+    
+    Status status = pasta_module_create(&module);
+
+    test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
+}
+
+static void destroy_should_return_free_null_error_when_module_argument_is_null()
 {
     Status status = pasta_module_destroy(NULL);
 
     test_assert(status == PASTA_ERROR_FREE_NULL);
 }
 
-static void destroy_should_return_free_null_error_if_module_name_is_null()
+static void destroy_should_return_free_null_error_when_module_name_is_null()
 {
     char *module_command = (char *)malloc(sizeof (char) * (PASTA_MODULE_MAX_CMD_LEN + 1));
     Module *module = (Module *)malloc(sizeof (Module));
@@ -259,7 +282,7 @@ static void destroy_should_return_free_null_error_if_module_name_is_null()
     test_assert(status == PASTA_ERROR_FREE_NULL);
 }
 
-static void destroy_should_return_free_null_error_if_module_command_is_null()
+static void destroy_should_return_free_null_error_when_module_command_is_null()
 {
     char *module_name = (char *)malloc(sizeof (char) * (PASTA_MODULE_MAX_CMD_LEN + 1));
     Module *module = (Module *)malloc(sizeof (Module));

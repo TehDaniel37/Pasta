@@ -3,15 +3,12 @@
 #include "pasta_module.h"
 
 #ifdef TEST
-void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes))
-{
-    return PASTA_ERROR_NOT_IMPLEMENTED;
-}
+void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes)) { }
 #endif
 
-Module *pasta_module_create()
+Status pasta_module_create(Module *module_p)
 {
-    return NULL;
+    return PASTA_ERROR_NOT_IMPLEMENTED;
 }
 
 Status pasta_module_destroy(Module *const module_p)

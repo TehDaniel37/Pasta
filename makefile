@@ -68,7 +68,7 @@ test: create_dirs $(test_objects) $(test_targets)
 	@for file in $(test_targets); do ./$$file; done
 
 # Compile each test
-$(test_target_dir)/test_%: $(test_object_dir)/test_%.o
+$(test_target_dir)/%: $(test_object_dir)/%.o
 	$(CC) $(CFLAGS) $< $(test_objects) -o $@
 
 $(test_object_dir)/%.o: $(test_dir)/%.c $(include_dir)/test.h

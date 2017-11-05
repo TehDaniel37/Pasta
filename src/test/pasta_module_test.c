@@ -1,10 +1,12 @@
-#include <stdlib.h> // malloc
-#include <string.h> // strncmp
+#include <stdlib.h>         // malloc
+#include <string.h>         // strncmp
+#include <stdbool.h>        // bool, true, false
 
-#include "test.h"
-#include "pasta_error.h"
-#include "pasta_module.h"
+#include "test.h"           // test_assert(), test_summary()
+#include "pasta_error.h"    // Status, error codes
+#include "pasta_module.h"   // Module, pasta_module_set_*() 
 
+#define PRINTABLE_ASCII_CHARS " !\"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~"
 #define STRING_100_CHARS "L2jX0CMU2W39t4Lt8eYZYZmTniyiySdhRTKQyyZpgvlmdLeIoFJWyIlPdZjE8fUllpdZPgM5sRZ0S4ormacyIEe27xrh9WbgiPcE"
 #define STRING_101_CHARS "ysrCek0ygdDVOZ7TTfxkAorGfER1YJEQ0zsUvhAILtgN9mI3hfDiS3GQaOqOlXJQRzV4pPVDBYtSiKuPXh5o6GDA0xP5Q4wuBSWQe"
 #define COMMAND_INVALID_SYNTAX "while ture; do ehco 'hello there!'; dnoe"
@@ -12,6 +14,8 @@
 
 static void *mock_allocator(size_t bytes);
 
+static void set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
+static void set_name_should_return_invalid_argument_error_when_argument_consists_of_non_printable_ascii_symbols();
 static void set_name_should_return_null_argument_error_when_module_argument_is_null();
 static void set_name_should_return_null_argument_error_when_name_argument_is_null();
 static void set_name_should_return_null_member_error_when_module_is_uninitialized();
@@ -42,6 +46,8 @@ static void destroy_should_return_free_null_error_when_module_command_is_null();
 
 int main(void)
 {
+    set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
+    set_name_should_return_invalid_argument_error_when_argument_consists_of_non_printable_ascii_symbols();
     set_name_should_return_null_argument_error_when_module_argument_is_null();
     set_name_should_return_null_argument_error_when_name_argument_is_null();
     set_name_should_return_null_member_error_when_module_is_uninitialized();
@@ -78,6 +84,45 @@ int main(void)
 static void *mock_allocator(size_t bytes)
 {
     return NULL;
+}
+
+static void set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols()
+{
+    Module module;
+    char *module_name[PASTA_MODULE_MAX_NAME_LEN + 1];
+    module.name = &(module_name[0]);
+
+    Status status = pasta_module_set_name(&module, PRINTABLE_ASCII_CHARS);
+
+    test_assert(strncmp(module.name, PRINTABLE_ASCII_CHARS, PASTA_MODULE_MAX_NAME_LEN) == 0);
+}
+
+static void set_name_should_return_invalid_argument_error_when_argument_consists_of_non_printable_ascii_symbols()
+{
+    static const char FIRST_NON_PRINTABLE_ASCII_CHAR = '\x1';
+    static const char FIRST_PRINTABLE_ASCII_CHAR = ' '; 
+
+    bool expected_result = true;
+
+    for (char non_printable = FIRST_NON_PRINTABLE_ASCII_CHAR; non_printable < FIRST_PRINTABLE_ASCII_CHAR; non_printable++)
+    {
+        char buffer[2];
+        buffer[0] = non_printable;
+        buffer[1] = '\0';
+        Module module;
+        char *module_name[PASTA_MODULE_MAX_NAME_LEN + 1];
+        module.name = &(module_name[0]);
+
+        Status status = pasta_module_set_name(&module, buffer);
+
+        if (status == PASTA_SUCCESS)
+        {
+            expected_result = false;
+            break;
+        }
+    }
+
+    test_assert(expected_result); 
 }
 
 static void set_name_should_return_null_argument_error_when_module_argument_is_null()

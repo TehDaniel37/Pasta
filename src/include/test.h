@@ -4,17 +4,19 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define test_assert(test) \
+#define test_assert(test) test_assert_name(test, __func__) 
+
+#define test_assert_name(test, func_name) \
     do \
     { \
         if ((test)) \
         { \
-            printf("Assertion succeeded for %s()\n", __func__); \
+            printf("Assertion succeeded for %s()\n", (func_name)); \
             tests_completed++; \
         } \
         else \
         { \
-            printf("Assertion failed for %s()\n", __func__); \
+            printf("Assertion failed for %s()\n", (func_name)); \
             tests_failed++; \
         } \
         tests_run++; \

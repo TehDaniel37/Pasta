@@ -64,7 +64,7 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 
 .PHONY: test
 test: CFLAGS=$(test_flags)
-test: create_dirs $(test_objects) $(test_targets)
+test: create_dirs $(objects) $(test_objects) $(test_targets)
 	@for file in $(test_targets); do ./$$file; done
 
 # Compile each test

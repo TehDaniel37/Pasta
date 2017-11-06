@@ -11,8 +11,8 @@
 static void *mock_allocator_will_return_null(size_t bytes);
 
 // Hook prototypes 
-static void when_members_free_check_name_is_null(char *name, char *command);
-static void when_members_free_check_command_is_null(char *name, char *command);
+static void when_destroy_has_freed_members_check_that_name_is_null(char *name, char *command);
+static void when_destroy_has_freed_members_check_that_command_is_null(char *name, char *command);
 
 // Test prototypes
 static void set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
@@ -368,14 +368,14 @@ static void destroy_should_free_name_member_when_argument_is_a_dynamically_alloc
     module_p->name = module_name;
     module_p->command = module_cmd;
 
-    pasta_module_hook_into_destroy_before_struct_free(when_members_free_check_name_is_null);
+    pasta_module_hook_into_destroy_before_struct_free(when_destroy_has_freed_members_check_that_name_is_null);
 
     pasta_module_destroy(&module_p);
 
     pasta_module_clear_destroy_hooks();
 }
 
-static void when_members_free_check_name_is_null(char *name, char *command)
+static void when_destroy_has_freed_members_check_that_name_is_null(char *name, char *command)
 {
     test_assert_name(name == NULL, "destroy_should_free_name_member_when_argument_is_a_dynamically_allocated_module");
 }
@@ -388,14 +388,14 @@ static void destroy_should_free_command_member_when_argument_is_a_dynamically_al
     module_p->name = module_name;
     module_p->command = module_cmd;
 
-    pasta_module_hook_into_destroy_before_struct_free(when_members_free_check_command_is_null);
+    pasta_module_hook_into_destroy_before_struct_free(when_destroy_has_freed_members_check_that_command_is_null);
 
     pasta_module_destroy(&module_p);
     
     pasta_module_clear_destroy_hooks();
 }
 
-static void when_members_free_check_command_is_null(char *name, char *command)
+static void when_destroy_has_freed_members_check_that_command_is_null(char *name, char *command)
 {
     test_assert_name(command == NULL, "destroy_should_free_command_member_when_argument_is_dynamically_allocated_module");
 }

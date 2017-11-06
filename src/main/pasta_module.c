@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -10,19 +11,23 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
 {
     if (module_p == NULL || name == NULL)
     {
+        puts("NULL_ARGUMENT");
         return PASTA_ERROR_NULL_ARGUMENT;
     }
 
     size_t cmp_at_most = (PASTA_MODULE_MAX_NAME_LEN <= name_len) ?
-                          PASTA_MODULE_MAX_NAME_LEN + 1:
-                          name_len ;
+                          PASTA_MODULE_MAX_NAME_LEN:
+                          name_len;
 
-    if (name[0] == '\0')
+    printf("at most = %zd\n", cmp_at_most);
+
+    if (name[0] == '\0' || name_len <= 0)
     {
+        puts("INVALID ARGUMENT");
         return PASTA_ERROR_INVALID_ARGUMENT;
     }
 
-    for (int char_index = 0; char_index < name_len; char_index++)
+    for (int char_index = 0; char_index <= name_len; char_index++)
     {
         if (name[char_index] == '\0')
         {
@@ -33,17 +38,20 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
 
         if (char_code >= FIRST_NON_NULL_ASCII_CHAR && char_code < FIRST_PRINTABLE_ASCII_CHAR)
         {
+            puts("INVALID ARGUMENT");
             return PASTA_ERROR_INVALID_ARGUMENT;
         }
     }
 
     if (strnlen(name, cmp_at_most) == cmp_at_most)
     {
+        puts("BUFFER OVERFLOW");
         return PASTA_ERROR_BUFFER_OVERFLOW;
     }
 
     strncpy(module_p->name, name, cmp_at_most);
 
+    puts("SUCCESS");
     return PASTA_SUCCESS;
 }
 
@@ -51,20 +59,25 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
 {
     if (module_p == NULL || command == NULL)
     {
+        puts("NULL ARGUMENT");
         return PASTA_ERROR_NULL_ARGUMENT;
     }
 
     size_t cmp_at_most = (PASTA_MODULE_MAX_CMD_LEN <= cmd_len) ?
                           PASTA_MODULE_MAX_CMD_LEN + 1:
-                          cmd_len ;
+                          cmd_len;
+
+    printf("at most = %zd\n", cmp_at_most);
 
     if (command[0] == '\0')
     {
+        puts("INVALID ARGUMENT");
         return PASTA_ERROR_INVALID_ARGUMENT;
     }
 
     if (strnlen(command, cmp_at_most) == cmp_at_most)
     {
+        puts("BUFFER OVERFLOW");
         return PASTA_ERROR_BUFFER_OVERFLOW;
     }
 
@@ -79,11 +92,13 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
 
     if (exit_code != EXIT_SUCCESS)
     {
+        puts("INVALID COMMAND SYNTAX");
         return PASTA_ERROR_INVALID_COMMAND_SYNTAX;
     }
 
     strncpy(module_p->command, command, cmp_at_most);
 
+    puts("SUCCESS");
     return PASTA_SUCCESS;
 }
 

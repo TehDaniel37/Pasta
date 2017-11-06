@@ -46,7 +46,7 @@ clean:
 .PHONY: create_dirs
 create_dirs: $(test_object_dir) $(test_target_dir) $(release_target_dir)
 
-$(test_object_dir): 
+$(test_object_dir):
 	mkdir -p $(test_object_dir)
 
 $(test_target_dir):

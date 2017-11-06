@@ -6,73 +6,6 @@
 static const char FIRST_NON_NULL_ASCII_CHAR = '\x1';
 static const char FIRST_PRINTABLE_ASCII_CHAR = ' ';
 
-// Prototypes
-static void hook_destroy_before_struct_free_default(char *name, char *command);
-
-// Hooks
-static void *(*allocator)(size_t bytes) = malloc;
-static void (*hook_destroy_before_struct_free)(char *name, char *command) = hook_destroy_before_struct_free_default;
-
-#ifdef TEST
-void pasta_module_set_allocator(void *(*alloc_func)(size_t bytes)) 
-{
-    allocator = alloc_func;
-}
-
-void pasta_module_hook_into_destroy_before_struct_free(void (*hook)(char *name, char *command))
-{
-    hook_destroy_before_struct_free = hook;
-}
-
-void pasta_module_clear_destroy_hooks()
-{
-    hook_destroy_before_struct_free = hook_destroy_before_struct_free_default;
-}
-#endif
-
-Status pasta_module_create(Module **module_pp)
-{
-    if (module_pp == NULL || *module_pp != NULL)
-    {
-        return PASTA_ERROR_INVALID_ARGUMENT;
-    }
-
-    Module *new_module = (Module *)allocator(sizeof (Module)); 
-
-    if (new_module == NULL)
-    {
-        return PASTA_ERROR_MALLOC_FAIL;
-    }
-
-    new_module->command = NULL;
-    new_module->name = NULL;
-
-    *module_pp = new_module;
-
-    return PASTA_SUCCESS;
-}
-
-Status pasta_module_destroy(Module **module_pp)
-{
-    if (module_pp == NULL)
-    {
-        return PASTA_ERROR_NULL_ARGUMENT;
-    }
-
-    free((*module_pp)->name);
-    (*module_pp)->name = NULL;
-
-    free((*module_pp)->command);
-    (*module_pp)->command = NULL;
-
-    hook_destroy_before_struct_free((*module_pp)->name, (*module_pp)->command);
-
-    free(*module_pp);
-    *module_pp = NULL;
-
-    return PASTA_SUCCESS;
-}
-
 Status pasta_module_set_name(Module *const module_p, const char *name, size_t name_len)
 {
     if (module_p == NULL || name == NULL)
@@ -81,7 +14,7 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
     }
 
     size_t cmp_at_most = (PASTA_MODULE_MAX_NAME_LEN <= name_len) ?
-                          PASTA_MODULE_MAX_NAME_LEN + 1: 
+                          PASTA_MODULE_MAX_NAME_LEN + 1:
                           name_len ;
 
     if (name[0] == '\0')
@@ -109,18 +42,6 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
         return PASTA_ERROR_BUFFER_OVERFLOW;
     }
 
-    if (module_p->name == NULL)
-    {
-        char *module_name = (char *)allocator(name_len);
-
-        if (module_name == NULL)
-        {
-            return PASTA_ERROR_MALLOC_FAIL;
-        }
-
-        module_p->name = module_name;
-    }
-
     strncpy(module_p->name, name, cmp_at_most);
 
     return PASTA_SUCCESS;
@@ -134,7 +55,7 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
     }
 
     size_t cmp_at_most = (PASTA_MODULE_MAX_CMD_LEN <= cmd_len) ?
-                          PASTA_MODULE_MAX_CMD_LEN + 1: 
+                          PASTA_MODULE_MAX_CMD_LEN + 1:
                           cmd_len ;
 
     if (command[0] == '\0')
@@ -159,18 +80,6 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
     if (exit_code != EXIT_SUCCESS)
     {
         return PASTA_ERROR_INVALID_COMMAND_SYNTAX;
-    }
-
-    if (module_p->command == NULL)
-    {
-        char *mod_cmd = (char *)allocator(cmd_len);
-
-        if (mod_cmd == NULL)
-        {
-            return PASTA_ERROR_MALLOC_FAIL;
-        }
-
-        module_p->command = mod_cmd;
     }
 
     strncpy(module_p->command, command, cmp_at_most);
@@ -213,6 +122,4 @@ Status pasta_module_set_state(Module *const module_p, ModuleState state)
 
     return PASTA_SUCCESS;
 }
-
-static void hook_destroy_before_struct_free_default(char *name, char *command){ }
 

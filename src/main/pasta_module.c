@@ -170,7 +170,7 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
             return PASTA_ERROR_MALLOC_FAIL;
         }
 
-        module_p->name = mod_cmd;
+        module_p->command = mod_cmd;
     }
 
     strncpy(module_p->command, command, cmp_at_most);

@@ -11,7 +11,6 @@
     { \
         if ((test)) \
         { \
-            printf("Assertion succeeded for %s()\n", (func_name)); \
             tests_completed++; \
         } \
         else \

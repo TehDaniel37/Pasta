@@ -11,19 +11,20 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
 {
     if (module_p == NULL || name == NULL)
     {
-        puts("NULL_ARGUMENT");
         return PASTA_ERROR_NULL_ARGUMENT;
     }
 
-    size_t cmp_at_most = (PASTA_MODULE_MAX_NAME_LEN <= name_len) ?
+    if (name_len > PASTA_MODULE_MAX_NAME_LEN)
+    {
+        return PASTA_ERROR_BUFFER_OVERFLOW;
+    }
+
+    size_t cpy_at_most = (PASTA_MODULE_MAX_NAME_LEN <= name_len) ?
                           PASTA_MODULE_MAX_NAME_LEN:
                           name_len;
 
-    printf("at most = %zd\n", cmp_at_most);
-
-    if (name[0] == '\0' || name_len <= 0)
+    if (name_len == 0 || name[0] == '\0')
     {
-        puts("INVALID ARGUMENT");
         return PASTA_ERROR_INVALID_ARGUMENT;
     }
 
@@ -38,20 +39,12 @@ Status pasta_module_set_name(Module *const module_p, const char *name, size_t na
 
         if (char_code >= FIRST_NON_NULL_ASCII_CHAR && char_code < FIRST_PRINTABLE_ASCII_CHAR)
         {
-            puts("INVALID ARGUMENT");
             return PASTA_ERROR_INVALID_ARGUMENT;
         }
     }
 
-    if (strnlen(name, cmp_at_most) == cmp_at_most)
-    {
-        puts("BUFFER OVERFLOW");
-        return PASTA_ERROR_BUFFER_OVERFLOW;
-    }
+    strncpy(module_p->name, name, cpy_at_most);
 
-    strncpy(module_p->name, name, cmp_at_most);
-
-    puts("SUCCESS");
     return PASTA_SUCCESS;
 }
 
@@ -59,46 +52,39 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
 {
     if (module_p == NULL || command == NULL)
     {
-        puts("NULL ARGUMENT");
         return PASTA_ERROR_NULL_ARGUMENT;
     }
 
-    size_t cmp_at_most = (PASTA_MODULE_MAX_CMD_LEN <= cmd_len) ?
-                          PASTA_MODULE_MAX_CMD_LEN + 1:
-                          cmd_len;
-
-    printf("at most = %zd\n", cmp_at_most);
-
-    if (command[0] == '\0')
+    if (cmd_len > PASTA_MODULE_MAX_CMD_LEN)
     {
-        puts("INVALID ARGUMENT");
-        return PASTA_ERROR_INVALID_ARGUMENT;
+        return PASTA_ERROR_BUFFER_OVERFLOW;
     }
 
-    if (strnlen(command, cmp_at_most) == cmp_at_most)
+    size_t cpy_at_most = (PASTA_MODULE_MAX_CMD_LEN <= cmd_len) ?
+                          PASTA_MODULE_MAX_CMD_LEN:
+                          cmd_len;
+
+    if (cmd_len == 0 || command[0] == '\0')
     {
-        puts("BUFFER OVERFLOW");
-        return PASTA_ERROR_BUFFER_OVERFLOW;
+        return PASTA_ERROR_INVALID_ARGUMENT;
     }
 
     static const char system_prefix[] = "/bin/sh -n -c \'";
     static const char system_postfix[] = "\' &> /dev/null";
-    char system_wrapper[cmd_len + sizeof(system_prefix) + sizeof(system_postfix)];
+    char system_wrapper[cmd_len + strlen(system_prefix) + strlen(system_postfix) + 1];
 
-    strncpy(system_wrapper, system_prefix, sizeof(system_prefix));
+    strncpy(system_wrapper, system_prefix, strlen(system_prefix));
     strncat(system_wrapper, command, cmd_len);
-    strncat(system_wrapper, system_postfix, sizeof(system_postfix));
+    strncat(system_wrapper, system_postfix, strlen(system_postfix));
     int exit_code = system(system_wrapper);
 
     if (exit_code != EXIT_SUCCESS)
     {
-        puts("INVALID COMMAND SYNTAX");
-        return PASTA_ERROR_INVALID_COMMAND_SYNTAX;
+        return PASTA_ERROR_INVALID_SYNTAX;
     }
 
-    strncpy(module_p->command, command, cmp_at_most);
+    strncpy(module_p->command, command, cpy_at_most);
 
-    puts("SUCCESS");
     return PASTA_SUCCESS;
 }
 

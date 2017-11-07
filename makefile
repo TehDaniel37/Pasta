@@ -71,5 +71,5 @@ test: create_dirs $(objects) $(test_objects) $(test_targets)
 $(test_target_dir)/%: $(test_object_dir)/%.o
 	$(CC) $(CFLAGS) $< $(test_objects) -o $@
 
-$(test_object_dir)/%.o: $(test_dir)/%.c $(include_dir)/test.h
+$(test_object_dir)/%.o: $(test_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@

@@ -64,11 +64,11 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 
 .PHONY: test
 test: CFLAGS=$(test_flags)
-test: create_dirs $(objects) $(test_objects) $(test_targets)
+test: create_dirs $(test_targets)
 	@for file in $(test_targets); do ./$$file; done
 
 # Compile each test
-$(test_target_dir)/%: $(test_object_dir)/%.o
+$(test_target_dir)/%: $(test_object_dir)/%.o $(test_objects)
 	$(CC) $(CFLAGS) $< $(test_objects) -o $@
 
 $(test_object_dir)/%.o: $(test_dir)/%.c $(headers)

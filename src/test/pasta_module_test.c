@@ -9,6 +9,7 @@
 
 // Test prototypes
 static void module_should_set_all_module_members_when_setters_are_called();
+static void module_setters_should_set_all_module_members_when_module_is_dynamically_allocated();
 
 static void set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
 static void set_name_should_return_invalid_argument_error_when_name_argument_contains_non_printable_ascii_symbols();
@@ -38,6 +39,7 @@ static void set_state_should_return_invalid_argument_error_when_state_argument_i
 int main(void)
 {
     module_should_set_all_module_members_when_setters_are_called();
+    module_setters_should_set_all_module_members_when_module_is_dynamically_allocated();
 
     set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
     set_name_should_return_invalid_argument_error_when_name_argument_contains_non_printable_ascii_symbols();
@@ -89,6 +91,30 @@ static void module_should_set_all_module_members_when_setters_are_called()
     bool cmds_match = (strncmp(mod.command, MOD_CMD, MOD_CMD_LEN) == 0);
     bool intervals_match = (mod.interval_seconds == MOD_INTERVAL);
     bool states_match = (mod.state == MOD_STATE);
+
+    test_assert(names_match && cmds_match && intervals_match && states_match);
+}
+
+static void module_setters_should_set_all_module_members_when_module_is_dynamically_allocated()
+{
+    static const char MOD_NAME[] = "dyn module";
+    static const size_t MOD_NAME_LEN = sizeof (MOD_NAME) - 1;
+    static const char MOD_CMD[] = "echo dynamic";
+    static const size_t MOD_CMD_LEN = sizeof (MOD_CMD) - 1;
+    static const int MOD_INTERVAL = 5;
+    static const ModuleState MOD_STATE = Stopped;
+
+    Module *mod_p = (Module *)malloc(sizeof (Module));
+
+    pasta_module_set_name(mod_p, MOD_NAME, MOD_NAME_LEN);
+    pasta_module_set_command(mod_p, MOD_CMD, MOD_CMD_LEN);
+    pasta_module_set_interval(mod_p, MOD_INTERVAL);
+    pasta_module_set_state(mod_p, MOD_STATE);
+
+    bool names_match = (strncmp(mod_p->name, MOD_NAME, MOD_NAME_LEN) == 0);
+    bool cmds_match = (strncmp(mod_p->command, MOD_CMD, MOD_CMD_LEN) == 0);
+    bool intervals_match = (mod_p->interval_seconds == MOD_INTERVAL);
+    bool states_match = (mod_p->state == MOD_STATE);
 
     test_assert(names_match && cmds_match && intervals_match && states_match);
 }

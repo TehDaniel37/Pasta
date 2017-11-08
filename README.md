@@ -1,5 +1,5 @@
 # PaSta
-<b>Pa</b>nel<b>Sta</b>tus is a work-in-progress program for generating information (date/time, WiFi status, CPU temperature, etc.) for your Linux window manager status panel/bar. The program is developed primarily to learn about processes in Linux.
+<b>Pa</b>nel<b>Sta</b>tus is a work-in-progress program for generating information (date/time, WiFi status, CPU temperature, etc.) for your Linux window manager status panel/bar. The program is written in plain C and is developed primarily to learn about processes in Linux as well as Test Driven Development (TDD).
 
 What sets it apart from similar project, like [i3status](https://github.com/i3/i3status), is that you are expected to write your status module scripts yourself (Though example modules will be provided). It will be possible to write them in any language, compiled or interpreted, as long as the script is executable on your system. This makes PaSta very flexible - if there is something you want to display in your status panel, like the number of available AUR upgrades on your Arch Linux setup or the test coverage on your currently opened development project - you will be able to display it as long as you can write a script that echoes it.
 

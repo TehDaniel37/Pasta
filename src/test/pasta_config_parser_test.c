@@ -142,12 +142,6 @@ static void load_modules_should_return_config_format_error_when_config_file_has_
 
 static void load_modules_should_return_allocation_error_when_allocation_fails()
 {
-    
-
-}
-
-static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
-{
     static const char TEST_CONF[] = "test_config_correct_format.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
@@ -162,6 +156,20 @@ static void load_modules_should_return_permission_denied_error_when_not_permitte
     pasta_config_reset_allocator();
 
     test_assert(status == PASTA_ERROR_ALLOCATION);
+}
+
+static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
+{
+    static const char TEST_CONF[] = "test_config_no_permission.conf";
+    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+
+    char *test_conf_no_permission = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    Module *modules = NULL;
+    int modules_len = 0;
+
+    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_no_permission);
+
+    test_assert(status == PASTA_ERROR_PERMISSION_DENIED);
 }
 
 static void load_modules_should_return_no_modules_warning_when_config_file_has_no_modules()

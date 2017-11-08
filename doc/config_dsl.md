@@ -4,22 +4,32 @@
 Config file should be named `pasta.conf` and be loaded from `$HOME/.config/pasta`, `$HOME/.pasta.conf` or a custom location specified via a flag.
 
 ## Module syntax iteration 0
-`[<Name of module>] `
 
-`run: <command>`
+```
+Module "<module name>" 
+	run `<command>`|<executable file>
+	every <interval>
+```
 
-`every: <interval to execute the script with>`
+Where `<interval>` is in the format `<value> <unit>`. 
+
+Available values for `unit` are:
+
++ `s`/`sec`/`second(s)`
++ `m`/`min`/`minute(s)`
++ `h`/`hour(s)`
 
 ### Example running a command every second
-`[Date/Time]`
 
-`run: date '+%F %T'`
-
-`every: 1 sec`
+```
+Module "datetime"
+    run `date '+%F %T'`
+    every 1 sec
+```
 
 ### Example running a script every 30 minutes
-`[Upgrades]`
-
-`run: pasta_upgrades.sh`
-
-`every: 30 min`
+```
+Module "upgrades"
+    run pasta_upgrades.sh
+    every 30 minutes
+```

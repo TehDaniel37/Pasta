@@ -1,11 +1,11 @@
-#include <stdlib.h>         // malloc
-#include <string.h>         // strncmp
-#include <stdbool.h>        // bool, true, false
-#include <stddef.h>         // size_t
+#include <stdlib.h>             // malloc
+#include <string.h>             // strncmp
+#include <stdbool.h>            // bool, true, false
+#include <stddef.h>             // size_t
 
-#include "test.h"           // test_assert(), test_summary()
-#include "pasta_error.h"    // Status, error codes
-#include "pasta_module.h"   // Module, pasta_module_set_*()
+#include "test.h"               // test_assert(), test_summary()
+#include "pasta_status_codes.h" // Status, error codes
+#include "pasta_module.h"       // Module, pasta_module_set_*()
 
 // Test prototypes
 static void module_should_set_all_module_members_when_setters_are_called();

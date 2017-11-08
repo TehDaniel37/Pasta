@@ -10,7 +10,7 @@
 
 #include <stddef.h> // size_t
 
-#include "pasta_error.h"
+#include "pasta_status_codes.h"
 
 #define PASTA_MODULE_MAX_NAME_LEN 100
 #define PASTA_MODULE_MAX_CMD_LEN 1000

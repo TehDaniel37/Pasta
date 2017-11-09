@@ -16,6 +16,7 @@ static char *get_test_resource(const char *file_name, size_t len);
 
 // test prototypes
 static void load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format();
+static void load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
 static void load_modules_should_return_file_not_found_error_when_file_does_not_exist();
 static void load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
 static void load_modules_should_return_allocation_error_when_allocation_fails();
@@ -25,6 +26,7 @@ static void load_modules_should_return_no_modules_warning_when_config_file_has_n
 int main(void) 
 {
     load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format();
+    load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
     load_modules_should_return_file_not_found_error_when_file_does_not_exist();
     load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
     load_modules_should_return_allocation_error_when_allocation_fails();
@@ -112,6 +114,21 @@ static void load_modules_should_load_correct_values_when_config_file_exists_and_
     test_assert(status == PASTA_SUCCESS);
 }
 
+static void load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null()
+{
+    static const char TEST_CONF[] = "test_default.conf";
+    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+
+    char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    Module not_null;
+    Module *not_null_addr = &not_null;
+    int not_null_len = 0;
+
+    Status status = pasta_config_load_modules(&not_null_addr, &not_null_len, test_conf);
+
+    test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
+}
+
 static void load_modules_should_return_file_not_found_error_when_file_does_not_exist()
 {
     static const char TEST_CONF[] = "non_existant.conf";
@@ -142,7 +159,7 @@ static void load_modules_should_return_config_format_error_when_config_file_has_
 
 static void load_modules_should_return_allocation_error_when_allocation_fails()
 {
-    static const char TEST_CONF[] = "test_config_correct_format.conf";
+    static const char TEST_CONF[] = "test_default.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);

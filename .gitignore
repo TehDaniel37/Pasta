@@ -1,4 +1,4 @@
 bin/
 obj/
 run_tests.sh
-res/debug/test/test_config_no_permission.conf
+res/debug/test/test_no_permission.conf

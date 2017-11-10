@@ -65,7 +65,7 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 .PHONY: test
 test: CFLAGS=$(test_flags)
 test: create_dirs $(test_targets)
-	@for file in $(test_targets); do ./$$file; done
+	@for file in $(test_targets); do valgrind -q --track-origins=yes --leak-check=yes $$file; done
 
 # Compile each test
 $(test_target_dir)/%: $(test_object_dir)/%.o $(test_objects)

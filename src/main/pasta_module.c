@@ -72,11 +72,13 @@ static bool is_valid_cmd(const char *const cmd, size_t cmd_len)
 {
     static const char system_prefix[] = "/bin/sh -n -c \'";
     static const char system_postfix[] = "\' &> /dev/null";
-    char system_wrapper[cmd_len + strlen(system_prefix) + strlen(system_postfix) + 1];
+    size_t sys_wrap_len = cmd_len + strlen(system_prefix) + strlen(system_postfix);
+    char system_wrapper[sys_wrap_len + 1];
 
-    strncpy(system_wrapper, system_prefix, strlen(system_prefix));
-    strncat(system_wrapper, cmd, cmd_len);
-    strncat(system_wrapper, system_postfix, strlen(system_postfix));
+    strncpy(system_wrapper, system_prefix, strlen(system_prefix) + 1);
+    strncat(system_wrapper, cmd, cmd_len + 1);
+    strncat(system_wrapper, system_postfix, strlen(system_postfix) + 1);
+    system_wrapper[sys_wrap_len + 1] = '\0';
     int exit_code = system(system_wrapper);
 
     return (exit_code == EXIT_SUCCESS);

@@ -19,7 +19,7 @@ static void load_modules_should_load_correct_values_when_config_file_exists_and_
 static void load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
 static void load_modules_should_return_file_not_found_error_when_file_does_not_exist();
 static void load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
-static void load_modules_should_return_allocation_error_when_allocation_fails();
+static void load_modules_should_return_allocation_failed_error_when_allocation_fails();
 static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
 static void load_modules_should_return_no_modules_warning_when_config_file_has_no_modules();
 
@@ -29,7 +29,7 @@ int main(void)
     load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
     load_modules_should_return_file_not_found_error_when_file_does_not_exist();
     load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
-    load_modules_should_return_allocation_error_when_allocation_fails();
+    load_modules_should_return_allocation_failed_error_when_allocation_fails();
     load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
     load_modules_should_return_no_modules_warning_when_config_file_has_no_modules();
 
@@ -42,7 +42,7 @@ static void *mock_allocator_will_return_null(size_t bytes) { return NULL; }
 
 static char *get_test_resource(const char *file_name, size_t len)
 {
-    static const char TEST_RES_PATH[] = "../res/debug/test/";
+    static const char TEST_RES_PATH[] = "/home/danalm/git/pasta_2/res/debug/test/";
     
     char *buffer_p = (char *)malloc(len + sizeof(TEST_RES_PATH));
 
@@ -75,21 +75,21 @@ static bool module_arrays_equal(const Module *const arr1, size_t arr1_len, const
 
 static void load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format()
 {
-    static const char TEST_CONF[] = "test_config_correct_format.conf";
+    static const char TEST_CONF[] = "test_correct_format.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     static const Module expected[] = {
-        {.name = "echo_every_10_s", .command = "`echo 'testing interval every 10 s'`", .interval_seconds = 10, .state = Stopped },
-        {.name = "echo_every_10_sec", .command = "`echo 'testing interval every 10 sec'`", .interval_seconds = 10, .state = Stopped },
-        {.name = "echo_every_10_seconds", .command = "`echo 'testing interval every 10 seconds'`", .interval_seconds = 10, .state = Stopped },
-        {.name = "echo_every_second", .command = "`echo 'testing interval every second'`", .interval_seconds = 1, .state = Stopped },
-        {.name = "echo_every_5_m", .command = "`echo 'testing interval every 5 m'`", .interval_seconds = 300, .state = Stopped },
-        {.name = "echo_every_5_min", .command = "`echo 'testing interval every 5 min'`", .interval_seconds = 300, .state = Stopped },
-        {.name = "echo_every_5_minutes", .command = "`echo 'testing interval every 5 minutes'`", .interval_seconds = 300, .state = Stopped },
-        {.name = "echo_every_minute", .command = "`echo 'testing interval every minute'`", .interval_seconds = 60, .state = Stopped },
-        {.name = "echo_every_2_h", .command = "`echo 'testing interval every 2 h'`", .interval_seconds = 7200, .state = Stopped },
-        {.name = "echo_every_2_hours", .command = "`echo 'testing interval every 2 hours'`", .interval_seconds = 7200, .state = Stopped },
-        {.name = "echo_every_hour", .command = "`echo 'testing interval every hour'`", .interval_seconds = 3600, .state = Stopped}
+        {.name = "echo_every_10_s", .command = "echo 'testing interval every 10 s'", .interval_seconds = 10, .state = Stopped },
+        {.name = "echo_every_10_sec", .command = "echo 'testing interval every 10 sec'", .interval_seconds = 10, .state = Stopped },
+        {.name = "echo_every_10_seconds", .command = "echo 'testing interval every 10 seconds'", .interval_seconds = 10, .state = Stopped },
+        {.name = "echo_every_second", .command = "echo 'testing interval every second'", .interval_seconds = 1, .state = Stopped },
+        {.name = "echo_every_5_m", .command = "echo 'testing interval every 5 m'", .interval_seconds = 300, .state = Stopped },
+        {.name = "echo_every_5_min", .command = "echo 'testing interval every 5 min'", .interval_seconds = 300, .state = Stopped },
+        {.name = "echo_every_5_minutes", .command = "echo 'testing interval every 5 minutes'", .interval_seconds = 300, .state = Stopped },
+        {.name = "echo_every_minute", .command = "echo 'testing interval every minute'", .interval_seconds = 60, .state = Stopped },
+        {.name = "echo_every_2_h", .command = "echo 'testing interval every 2 h'", .interval_seconds = 7200, .state = Stopped },
+        {.name = "echo_every_2_hours", .command = "echo 'testing interval every 2 hours'", .interval_seconds = 7200, .state = Stopped },
+        {.name = "echo_every_hour", .command = "echo 'testing interval every hour'", .interval_seconds = 3600, .state = Stopped}
     };
     static const size_t expected_len = sizeof (expected) / sizeof (Module);
 
@@ -121,10 +121,10 @@ static void load_modules_should_return_invalid_argument_error_when_modules_argum
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Module not_null;
-    Module *not_null_addr = &not_null;
+    Module *not_null_p = &not_null;
     int not_null_len = 0;
 
-    Status status = pasta_config_load_modules(&not_null_addr, &not_null_len, test_conf);
+    Status status = pasta_config_load_modules(&not_null_p, &not_null_len, test_conf);
 
     test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
 }
@@ -145,7 +145,7 @@ static void load_modules_should_return_file_not_found_error_when_file_does_not_e
 
 static void load_modules_should_return_config_format_error_when_config_file_has_incorrect_format()
 {
-    static const char TEST_CONF[] = "test_config_incorrect_format.conf";
+    static const char TEST_CONF[] = "test_incorrect_format.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_incorrect_format = get_test_resource(TEST_CONF, TEST_CONF_LEN);
@@ -157,7 +157,7 @@ static void load_modules_should_return_config_format_error_when_config_file_has_
     test_assert(status == PASTA_ERROR_CONFIG_FORMAT);
 }
 
-static void load_modules_should_return_allocation_error_when_allocation_fails()
+static void load_modules_should_return_allocation_failed_error_when_allocation_fails()
 {
     static const char TEST_CONF[] = "test_default.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
@@ -172,12 +172,12 @@ static void load_modules_should_return_allocation_error_when_allocation_fails()
 
     pasta_config_reset_allocator();
 
-    test_assert(status == PASTA_ERROR_ALLOCATION);
+    test_assert(status == PASTA_ERROR_ALLOCATION_FAILED);
 }
 
 static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
 {
-    static const char TEST_CONF[] = "test_config_no_permission.conf";
+    static const char TEST_CONF[] = "test_no_permission.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_no_permission = get_test_resource(TEST_CONF, TEST_CONF_LEN);
@@ -191,7 +191,7 @@ static void load_modules_should_return_permission_denied_error_when_not_permitte
 
 static void load_modules_should_return_no_modules_warning_when_config_file_has_no_modules()
 {
-    static const char TEST_CONF[] = "test_config_no_modules.conf";
+    static const char TEST_CONF[] = "test_no_modules.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_no_modules = get_test_resource(TEST_CONF, TEST_CONF_LEN);

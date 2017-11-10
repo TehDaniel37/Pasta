@@ -52,7 +52,7 @@ static char *get_test_resource(const char *file_name, size_t len)
         exit(EXIT_FAILURE);
     }
 
-    strncpy(buffer_p, TEST_RES_PATH, sizeof(TEST_RES_PATH) - 1);
+    strncpy(buffer_p, TEST_RES_PATH, sizeof(TEST_RES_PATH));
     strncat(buffer_p, file_name, len);
 
     return buffer_p;
@@ -99,17 +99,23 @@ static void load_modules_should_load_correct_values_when_config_file_exists_and_
 
     Status status = pasta_config_load_modules(&actual, &actual_len, test_config_valid);
 
+    free(test_config_valid);
+
     if (actual_len != expected_len)
     {
         test_fail();
+        free(actual);
         return;
     }
 
     if (!module_arrays_equal(expected, expected_len, actual, actual_len))
     {
         test_fail();
+        free(actual);
         return;
     }
+
+    free(actual);
 
     test_assert(status == PASTA_SUCCESS);
 }
@@ -126,6 +132,8 @@ static void load_modules_should_return_invalid_argument_error_when_modules_argum
 
     Status status = pasta_config_load_modules(&not_null_p, &not_null_len, test_conf);
 
+    free(test_conf);
+
     test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
 }
 
@@ -140,6 +148,9 @@ static void load_modules_should_return_file_not_found_error_when_file_does_not_e
 
     Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_non_existant);
 
+    free(test_conf_non_existant);
+    free(modules);
+
     test_assert(status == PASTA_ERROR_FILE_NOT_FOUND);
 }
 
@@ -153,6 +164,9 @@ static void load_modules_should_return_config_format_error_when_config_file_has_
     int modules_len = 0;
 
     Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_incorrect_format);
+
+    free(test_conf_incorrect_format);
+    free(modules);
 
     test_assert(status == PASTA_ERROR_CONFIG_FORMAT);
 }
@@ -170,6 +184,9 @@ static void load_modules_should_return_allocation_failed_error_when_allocation_f
 
     Status status = pasta_config_load_modules(&modules, &modules_len, test_conf);
 
+    free(test_conf);
+    free(modules);
+
     pasta_config_reset_allocator();
 
     test_assert(status == PASTA_ERROR_ALLOCATION_FAILED);
@@ -186,6 +203,9 @@ static void load_modules_should_return_permission_denied_error_when_not_permitte
 
     Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_no_permission);
 
+    free(test_conf_no_permission);
+    free(modules);
+
     test_assert(status == PASTA_ERROR_PERMISSION_DENIED);
 }
 
@@ -199,6 +219,9 @@ static void load_modules_should_return_no_modules_warning_when_config_file_has_n
     int modules_len = 0;
 
     Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_no_modules);
+
+    free(test_conf_no_modules);
+    free(modules);
 
     test_assert(status == PASTA_WARNING_NO_MODULES && modules == NULL && modules_len == 0);
 }

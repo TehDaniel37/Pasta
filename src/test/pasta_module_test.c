@@ -116,6 +116,8 @@ static void module_setters_should_set_all_module_members_when_module_is_dynamica
     bool intervals_match = (mod_p->interval_seconds == MOD_INTERVAL);
     bool states_match = (mod_p->state == MOD_STATE);
 
+    free(mod_p);
+
     test_assert(names_match && cmds_match && intervals_match && states_match);
 }
 

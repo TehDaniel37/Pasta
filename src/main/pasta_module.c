@@ -61,6 +61,7 @@ static void copy_string(char *destination, const char *const source, size_t sour
                           source_len;
 
     strncpy(destination, source, cpy_at_most);
+    destination[cpy_at_most] = '\0';
 }
 
 static bool is_empty_str(const char *const str, size_t str_len)

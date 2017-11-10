@@ -61,6 +61,7 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
     if (status != PASTA_SUCCESS)
     {
+        free(file_contents);
         return status;
     }
 
@@ -70,6 +71,7 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
     if (loaded_modules == NULL)
     {
+        free(file_contents);
         return PASTA_ERROR_ALLOCATION_FAILED;
     }
 
@@ -80,7 +82,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
     {
         if (modules_count > expected_mods_len)
         {
-            puts("wrong number of modules");
+            free(file_contents);
+            free(loaded_modules);
             return PASTA_ERROR_CONFIG_FORMAT;
         }
 
@@ -93,7 +96,13 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
             
             word = strtok(NULL, NAME_DELIM); 
 
-            if (word != NULL)
+            if (word == NULL)
+            {
+                free(file_contents);
+                free(loaded_modules);
+                return PASTA_ERROR_CONFIG_FORMAT;
+            }
+            else
             {
                 pasta_module_set_name(current_module, word, strlen(word));
             }
@@ -105,7 +114,13 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
             {
                 word = strtok(NULL, CMD_DELIM);
                 
-                if (word != NULL)
+                if (word == NULL)
+                {
+                    free(file_contents);
+                    free(loaded_modules);
+                    return PASTA_ERROR_CONFIG_FORMAT;
+                }
+                else
                 {
                     pasta_module_set_command(current_module, word, strlen(word));
                 }
@@ -123,6 +138,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
                 if (tok == NULL)
                 {
+                    free(file_contents);
+                    free(loaded_modules);
                     return PASTA_ERROR_CONFIG_FORMAT;
                 }
                 else if (is_unit(tok)) 
@@ -137,6 +154,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
                     if (tok == NULL)
                     {
+                        free(file_contents);
+                        free(loaded_modules);
                         return PASTA_ERROR_CONFIG_FORMAT;
                     }
                     else if (is_unit(tok))
@@ -145,11 +164,15 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                     }
                     else 
                     {
+                        free(file_contents);
+                        free(loaded_modules);
                         return PASTA_ERROR_CONFIG_FORMAT;
                     }
                 }
                 else
                 {
+                    free(file_contents);
+                    free(loaded_modules);
                     return PASTA_ERROR_CONFIG_FORMAT;
                 }
 
@@ -171,6 +194,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                 }
                 else
                 {
+                    free(file_contents);
+                    free(loaded_modules);
                     return PASTA_ERROR_CONFIG_FORMAT;
                 }
 
@@ -179,6 +204,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
         }
         else
         {
+            free(file_contents);
+            free(loaded_modules);
             return PASTA_ERROR_CONFIG_FORMAT;
         }
 
@@ -187,6 +214,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
             word = strtok(NULL, DEFAULT_DELIM);
         }
     }
+
+    free(file_contents);
 
     *mod = loaded_modules;
     *loaded_modules_count = modules_count;
@@ -234,23 +263,26 @@ static Status find_number_of_modules(char *file_contents, size_t file_len, size_
 
     size_t result = 0;
     
-    char *cpy = (char *)allocator(file_len);
+    char *cpy = (char *)allocator(file_len + 1);
     
     if (cpy == NULL)
     {
         return PASTA_ERROR_ALLOCATION_FAILED;
     }
 
-    strncpy(cpy, file_contents, file_len);
+    strncpy(cpy, file_contents, file_len + 1);
+    cpy[file_len] = '\0';
+
     char *line = strtok(cpy, NEW_LINE);
 
     while (line != NULL)
     {
         if (strncmp("Module", line, MOD_LEN) == 0) { result++; }
 
-        line = strtok(NULL, NEW_LINE);
+        if (line != NULL) { line = strtok(NULL, NEW_LINE); }
     }
 
+    free(cpy);
 
     *number_of_modules = result;
 

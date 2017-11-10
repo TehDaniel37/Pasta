@@ -50,10 +50,12 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
     
     if (file_contents == NULL)
     {
+        fclose(file_p);
         return PASTA_ERROR_ALLOCATION_FAILED;
     }
 
     size_t len = fread(file_contents, sizeof (char), st.st_size, file_p);
+    fclose(file_p);
     file_contents[len] = '\0';
 
     size_t expected_mods_len = 0;
@@ -75,8 +77,7 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
         return PASTA_ERROR_ALLOCATION_FAILED;
     }
 
-    char *word = NULL;
-    word = strtok(file_contents, DEFAULT_DELIM); 
+    char *word = strtok(file_contents, DEFAULT_DELIM); 
 
     while (word != NULL)
     {
@@ -279,7 +280,7 @@ static Status find_number_of_modules(char *file_contents, size_t file_len, size_
     {
         if (strncmp("Module", line, MOD_LEN) == 0) { result++; }
 
-        if (line != NULL) { line = strtok(NULL, NEW_LINE); }
+        line = strtok(NULL, NEW_LINE);
     }
 
     free(cpy);

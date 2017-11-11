@@ -27,7 +27,6 @@ static void set_command_should_set_command_member_when_command_argument_is_a_val
 static void set_command_should_return_null_argument_error_when_module_argument_is_null();
 static void set_command_should_return_null_argument_error_when_command_argument_is_null();
 static void set_command_should_return_invalid_argument_error_when_cmd_len_argument_is_equal_to_zero();
-static void set_command_should_return_invalid_syntax_error_when_command_argument_has_invalid_syntax();
 static void set_command_should_return_invalid_argument_error_when_command_argument_is_an_empty_string();
 static void set_command_should_set_entire_command_member_when_command_argument_length_is_equal_to_max_allowed();
 static void set_command_should_return_buffer_overflow_error_when_command_argument_length_is_longer_than_max_allowed();
@@ -59,7 +58,6 @@ int main(void)
     set_command_should_set_command_member_when_command_argument_is_a_valid_command();
     set_command_should_return_null_argument_error_when_module_argument_is_null();
     set_command_should_return_null_argument_error_when_command_argument_is_null();
-    set_command_should_return_invalid_syntax_error_when_command_argument_has_invalid_syntax();
     set_command_should_return_invalid_argument_error_when_command_argument_is_an_empty_string();
     set_command_should_return_invalid_argument_error_when_cmd_len_argument_is_equal_to_zero();
     set_command_should_set_entire_command_member_when_command_argument_length_is_equal_to_max_allowed();
@@ -279,17 +277,6 @@ static void set_command_should_return_null_argument_error_when_command_argument_
     Status status = pasta_module_set_command(&module, NULL, 0);
 
     test_assert(status == PASTA_ERROR_NULL_ARGUMENT);
-}
-
-static void set_command_should_return_invalid_syntax_error_when_command_argument_has_invalid_syntax()
-{
-    static const char CMD_INVALID_SYNTAX[] = "while ture; do ehco 'hello there!'; dnoe";
-
-    Module module;
-
-    Status status = pasta_module_set_command(&module, CMD_INVALID_SYNTAX, sizeof (CMD_INVALID_SYNTAX) - 1);
-
-    test_assert(status == PASTA_ERROR_INVALID_SYNTAX);
 }
 
 static void set_command_should_return_invalid_argument_error_when_command_argument_is_an_empty_string()

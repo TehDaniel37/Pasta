@@ -7,7 +7,6 @@
 
 static void copy_string(char *destination, const char *const source, size_t source_len, size_t max_len);
 static bool is_empty_str(const char *const str, size_t str_len);
-static bool is_valid_cmd(const char *const cmd, size_t cmd_len);
 static bool contains_invalid_chars(const char *const name, size_t name_len);
 
 Status pasta_module_init(Module *const module_p)
@@ -39,7 +38,6 @@ Status pasta_module_set_command(Module *const module_p, const char *command, siz
     if (module_p == NULL || command == NULL) { return PASTA_ERROR_NULL_ARGUMENT; }
     if (cmd_len > PASTA_MODULE_MAX_CMD_LEN) { return PASTA_ERROR_BUFFER_OVERFLOW; }
     if (is_empty_str(command, cmd_len)) { return PASTA_ERROR_INVALID_ARGUMENT; }
-    if (!is_valid_cmd(command, cmd_len)) { return PASTA_ERROR_INVALID_SYNTAX; }
 
     copy_string(&(module_p->command[0]), command, cmd_len, PASTA_MODULE_MAX_CMD_LEN);
 
@@ -79,22 +77,6 @@ static void copy_string(char *destination, const char *const source, size_t sour
 static bool is_empty_str(const char *const str, size_t str_len)
 {
     return ( str_len == 0 || (str != NULL && str[0] == '\0') );
-}
-
-static bool is_valid_cmd(const char *const cmd, size_t cmd_len)
-{
-    static const char system_prefix[] = "/bin/sh -n -c \'";
-    static const char system_postfix[] = "\' &> /dev/null";
-    size_t sys_wrap_len = cmd_len + strlen(system_prefix) + strlen(system_postfix);
-    char system_wrapper[sys_wrap_len + 1];
-
-    strncpy(system_wrapper, system_prefix, strlen(system_prefix) + 1);
-    strncat(system_wrapper, cmd, cmd_len + 1);
-    strncat(system_wrapper, system_postfix, strlen(system_postfix) + 1);
-    system_wrapper[sys_wrap_len + 1] = '\0';
-    int exit_code = system(system_wrapper);
-
-    return (exit_code == EXIT_SUCCESS);
 }
 
 static bool contains_invalid_chars(const char *const str, size_t str_len)

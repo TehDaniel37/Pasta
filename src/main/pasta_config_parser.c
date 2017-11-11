@@ -91,10 +91,9 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
         if (strncmp("Module", word, MAX_WORD_LEN) == 0)
         {
             current_module = &(loaded_modules[modules_count]);
+            pasta_module_init(current_module);
             modules_count++;
 
-            pasta_module_set_state(current_module, Stopped);
-            
             word = strtok(NULL, NAME_DELIM); 
 
             if (word == NULL)

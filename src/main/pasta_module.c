@@ -10,6 +10,18 @@ static bool is_empty_str(const char *const str, size_t str_len);
 static bool is_valid_cmd(const char *const cmd, size_t cmd_len);
 static bool contains_invalid_chars(const char *const name, size_t name_len);
 
+Status pasta_module_init(Module *const module_p)
+{
+    if (module_p == NULL) { return PASTA_ERROR_NULL_ARGUMENT; }
+
+    module_p->name[0] = '\0';
+    module_p->command[0] = '\0';
+    pasta_module_set_interval(module_p, 0);
+    pasta_module_set_state(module_p, Stopped);
+
+    return PASTA_SUCCESS;
+}
+
 Status pasta_module_set_name(Module *const module_p, const char *name, size_t name_len)
 {
     if (module_p == NULL || name == NULL) { return PASTA_ERROR_NULL_ARGUMENT; }

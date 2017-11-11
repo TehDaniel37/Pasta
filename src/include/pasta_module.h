@@ -34,6 +34,7 @@ struct Module
 
 typedef struct Module Module;
 
+Status pasta_module_init(Module *const module_p);
 Status pasta_module_set_name(Module *const module_p, const char *name, size_t name_len);
 Status pasta_module_set_command(Module *const module_p, const char *command, size_t cmd_len);
 Status pasta_module_set_interval(Module *const module_p, int interval);

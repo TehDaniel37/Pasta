@@ -11,6 +11,9 @@
 static void module_should_set_all_module_members_when_setters_are_called();
 static void module_setters_should_set_all_module_members_when_module_is_dynamically_allocated();
 
+static void init_should_return_null_argument_error_when_module_argument_is_null();
+static void init_should_set_members_to_default_values();
+
 static void set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
 static void set_name_should_return_invalid_argument_error_when_name_argument_contains_non_printable_ascii_symbols();
 static void set_name_should_return_null_argument_error_when_module_argument_is_null();
@@ -41,6 +44,9 @@ int main(void)
     module_should_set_all_module_members_when_setters_are_called();
     module_setters_should_set_all_module_members_when_module_is_dynamically_allocated();
 
+    init_should_return_null_argument_error_when_module_argument_is_null();
+    init_should_set_members_to_default_values();
+
     set_name_should_set_name_member_when_argument_consists_of_printable_ascii_symbols();
     set_name_should_return_invalid_argument_error_when_name_argument_contains_non_printable_ascii_symbols();
     set_name_should_return_invalid_argument_error_when_name_len_argument_is_equal_to_zero();
@@ -69,6 +75,27 @@ int main(void)
     test_print_summary();
 
     return EXIT_SUCCESS;
+}
+
+static void init_should_return_null_argument_error_when_module_argument_is_null()
+{
+    Status status = pasta_module_init(NULL);
+
+    test_assert(status == PASTA_ERROR_NULL_ARGUMENT);
+}
+
+static void init_should_set_members_to_default_values()
+{
+    Module module;
+
+    Status status = pasta_module_init(&module);
+
+    bool names_match = (module.name[0] == '\0');
+    bool cmds_match = (module.command[0] == '\0');
+    bool intervals_match = (module.interval_seconds == 0);
+    bool states_match = (module.state == Stopped);
+
+    test_assert(status == PASTA_SUCCESS && names_match && cmds_match && intervals_match && states_match);
 }
 
 static void module_should_set_all_module_members_when_setters_are_called()

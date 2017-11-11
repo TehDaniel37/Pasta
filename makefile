@@ -3,7 +3,7 @@ TARGET = pasta
 
 # Compiler flags
 debug_flags = -g -Wall -pedantic -Werror
-release_flags = -O
+release_flags = -O3
 test_flags = $(debug_flags) -DTEST
 
 # Directories
@@ -32,7 +32,8 @@ all: debug
 .PHONY: release
 release: CFLAGS=$(release_flags)
 release: target_dir=$(release_target_dir)
-release: build
+release: create_dirs
+	$(CC) $(CFLAGS) -I $(include_dir) $(sources) -o $(target_dir)/$(TARGET)
 
 .PHONY: check
 check:
@@ -73,7 +74,7 @@ test: create_dirs $(test_targets)
 # Compile each test
 $(test_target_dir)/%: $(test_object_dir)/%.o $(test_objects)
 	$(CC) $(CFLAGS) $< $(test_objects) -o $@ 
-	@valgrind -q --track-origins=yes --leak-check=yes $@
+	@valgrind -q --track-origins=yes --leak-check=full $@
 
 $(test_object_dir)/%.o: $(test_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@

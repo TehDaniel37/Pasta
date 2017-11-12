@@ -4,7 +4,7 @@ TARGET = pasta
 # Compiler flags
 debug_flags = -g -Wall -pedantic -Werror
 release_flags = -O3
-test_flags = $(debug_flags) -DTEST
+test_flags = $(debug_flags) -DTEST --coverage
 
 # Directories
 debug_target_dir = bin/debug
@@ -70,6 +70,8 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 .PHONY: test
 test: CFLAGS=$(test_flags)
 test: create_dirs $(test_targets)
+test:
+	@gcov $(object_dir)/*.gcno
 
 # Compile each test
 $(test_target_dir)/%: $(test_object_dir)/%.o $(test_objects)

@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #include <pasta_module.h>
+#include <pasta_status_codes.h>
 
 /*
  * pasta_scheduler_init
@@ -17,7 +18,7 @@
  * notified through the signal SIGUSR2 when the scheduler is ready to begin
  * starting modules.
  */
-void pasta_scheduler_init(void);
+Status pasta_scheduler_init(void);
 
 /*
  * pasta_scheduler_start_module
@@ -27,16 +28,14 @@ void pasta_scheduler_init(void);
  *
  * The scheduler MUST be initialized through the pasta_scheduler_init before
  * attempting to start a module.
- *
- * returns 'true' if the module could be started and 'false' otherwise.
  */
-bool pasta_scheduler_start_module(Module module);
+Status pasta_scheduler_start_module(Module *module_p);
 
 /*
  * pasta_scheduler_stop_module
  *
  * Stops the provided module if it is running.
  */
-void pasta_scheduler_stop_module(Module module);
+Status pasta_scheduler_stop_module(Module *module_p);
 
 #endif /* PASTA_SCHEDULER_H */

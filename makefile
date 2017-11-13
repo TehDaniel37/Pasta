@@ -37,6 +37,7 @@ release: create_dirs
 
 .PHONY: check
 check:
+	$(CC) -DTEST -fsyntax-only -I $(include_dir) $(sources) $(tests)
 	cppcheck -q --enable=all -I src/include --language=c --platform=unix64 --std=c11 --suppress=missingIncludeSystem src
 
 .PHONY: debug

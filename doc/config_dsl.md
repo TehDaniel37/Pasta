@@ -1,12 +1,12 @@
 # Config DSL Example
 
 ## File location
-Config file should be named `pasta.conf` and be loaded from `$HOME/.config/pasta`, `$HOME/.pasta.conf` or a custom location specified via a flag.
+Config file should be named `schedr.conf` and be loaded from `$HOME/.config/schedr`, `$HOME/.schedr.conf` or a custom location specified via a flag.
 
 ## Module syntax iteration 0
 
 ```
-Module "<module name>" 
+Job "<job name>" 
 	run `<command>`|<executable file>
 	every <interval>
 ```
@@ -22,14 +22,14 @@ Available values for `unit` are:
 ### Example running a command every second
 
 ```
-Module "datetime"
+Job "datetime"
     run `date '+%F %T'`
     every 1 sec
 ```
 
 ### Example running a script every 30 minutes
 ```
-Module "upgrades"
+Job "upgrades"
     run pasta_upgrades.sh
     every 30 minutes
 ```

@@ -3,35 +3,35 @@
 #include <string.h>         // strncpy(), strncat()
 
 #include "test.h"
-#include "pasta_config_parser.h"
-#include "pasta_module.h"
-#include "pasta_status_codes.h"
+#include "schedr_config_parser.h"
+#include "schedr_job.h"
+#include "schedr_status_codes.h"
 
 // mock prototypes
 static void *mock_allocator_will_return_null(size_t bytes);
 
 // test helper prototypes
-static bool module_arrays_equal(const Module *const arr1, size_t arr1_len, const Module *const arr2, size_t arr2_len);
+static bool job_arrays_equal(const Job *const arr1, size_t arr1_len, const Job *const arr2, size_t arr2_len);
 static char *get_test_resource(const char *file_name, size_t len);
 
 // test prototypes
-static void load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format();
-static void load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
-static void load_modules_should_return_file_not_found_error_when_file_does_not_exist();
-static void load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
-static void load_modules_should_return_allocation_failed_error_when_allocation_fails();
-static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
-static void load_modules_should_return_no_modules_warning_when_config_file_has_no_modules();
+static void load_jobs_should_load_correct_values_when_config_file_exists_and_has_correct_format();
+static void load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null();
+static void load_jobs_should_return_file_not_found_error_when_file_does_not_exist();
+static void load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format();
+static void load_jobs_should_return_allocation_failed_error_when_allocation_fails();
+static void load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
+static void load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs();
 
 int main(void) 
 {
-    load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format();
-    load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null();
-    load_modules_should_return_file_not_found_error_when_file_does_not_exist();
-    load_modules_should_return_config_format_error_when_config_file_has_incorrect_format();
-    load_modules_should_return_allocation_failed_error_when_allocation_fails();
-    load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
-    load_modules_should_return_no_modules_warning_when_config_file_has_no_modules();
+    load_jobs_should_load_correct_values_when_config_file_exists_and_has_correct_format();
+    load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null();
+    load_jobs_should_return_file_not_found_error_when_file_does_not_exist();
+    load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format();
+    load_jobs_should_return_allocation_failed_error_when_allocation_fails();
+    load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
+    load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs();
 
     test_print_summary();
 
@@ -42,7 +42,7 @@ static void *mock_allocator_will_return_null(size_t bytes) { return NULL; }
 
 static char *get_test_resource(const char *file_name, size_t len)
 {
-    static const char TEST_RES_PATH[] = "/home/danalm/git/pasta_2/res/debug/test/";
+    static const char TEST_RES_PATH[] = "/home/danalm/git/schedr/res/debug/test/";
     
     char *buffer_p = (char *)malloc(len + sizeof(TEST_RES_PATH));
 
@@ -58,7 +58,7 @@ static char *get_test_resource(const char *file_name, size_t len)
     return buffer_p;
 }
 
-static bool module_arrays_equal(const Module *const arr1, size_t arr1_len, const Module *const arr2, size_t arr2_len)
+static bool job_arrays_equal(const Job *const arr1, size_t arr1_len, const Job *const arr2, size_t arr2_len)
 {
     if (arr1_len != arr2_len) { return false; }
 
@@ -73,12 +73,12 @@ static bool module_arrays_equal(const Module *const arr1, size_t arr1_len, const
     return true;
 }
 
-static void load_modules_should_load_correct_values_when_config_file_exists_and_has_correct_format()
+static void load_jobs_should_load_correct_values_when_config_file_exists_and_has_correct_format()
 {
     static const char TEST_CONF[] = "test_correct_format.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    static const Module expected[] = {
+    static const Job expected[] = {
         {.name = "echo_every_10_s", .command = "echo 'testing interval every 10 s'", .interval_seconds = 10, .state = Stopped },
         {.name = "echo_every_10_sec", .command = "echo 'testing interval every 10 sec'", .interval_seconds = 10, .state = Stopped },
         {.name = "echo_every_10_seconds", .command = "echo 'testing interval every 10 seconds'", .interval_seconds = 10, .state = Stopped },
@@ -91,25 +91,27 @@ static void load_modules_should_load_correct_values_when_config_file_exists_and_
         {.name = "echo_every_2_hours", .command = "echo 'testing interval every 2 hours'", .interval_seconds = 7200, .state = Stopped },
         {.name = "echo_every_hour", .command = "echo 'testing interval every hour'", .interval_seconds = 3600, .state = Stopped}
     };
-    static const size_t expected_len = sizeof (expected) / sizeof (Module);
+    static const size_t expected_len = sizeof (expected) / sizeof (Job);
 
     char *test_config_valid = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *actual = NULL;
+    Job *actual = NULL;
     int actual_len = 0;
 
-    Status status = pasta_config_load_modules(&actual, &actual_len, test_config_valid);
+    Status status = schedr_config_load_jobs(&actual, &actual_len, test_config_valid);
 
     free(test_config_valid);
 
     if (actual_len != expected_len)
     {
+        printf("length differs. was %d but expected %ld\n", actual_len, expected_len);
         test_fail();
         free(actual);
         return;
     }
 
-    if (!module_arrays_equal(expected, expected_len, actual, actual_len))
+    if (!job_arrays_equal(expected, expected_len, actual, actual_len))
     {
+        puts("arrays differ");
         test_fail();
         free(actual);
         return;
@@ -117,112 +119,114 @@ static void load_modules_should_load_correct_values_when_config_file_exists_and_
 
     free(actual);
 
-    test_assert(status == PASTA_SUCCESS);
+    printf("status is: %d\n", status);
+
+    test_assert(status == SCHEDR_SUCCESS);
 }
 
-static void load_modules_should_return_invalid_argument_error_when_modules_argument_is_not_null()
+static void load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null()
 {
     static const char TEST_CONF[] = "test_default.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module not_null;
-    Module *not_null_p = &not_null;
+    Job not_null;
+    Job *not_null_p = &not_null;
     int not_null_len = 0;
 
-    Status status = pasta_config_load_modules(&not_null_p, &not_null_len, test_conf);
+    Status status = schedr_config_load_jobs(&not_null_p, &not_null_len, test_conf);
 
     free(test_conf);
 
-    test_assert(status == PASTA_ERROR_INVALID_ARGUMENT);
+    test_assert(status == SCHEDR_ERROR_INVALID_ARGUMENT);
 }
 
-static void load_modules_should_return_file_not_found_error_when_file_does_not_exist()
+static void load_jobs_should_return_file_not_found_error_when_file_does_not_exist()
 {
     static const char TEST_CONF[] = "non_existant.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_non_existant = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *modules = NULL;
-    int modules_len = 0;
+    Job *jobs = NULL;
+    int jobs_len = 0;
 
-    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_non_existant);
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_non_existant);
 
     free(test_conf_non_existant);
-    free(modules);
+    free(jobs);
 
-    test_assert(status == PASTA_ERROR_FILE_NOT_FOUND);
+    test_assert(status == SCHEDR_ERROR_FILE_NOT_FOUND);
 }
 
-static void load_modules_should_return_config_format_error_when_config_file_has_incorrect_format()
+static void load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format()
 {
     static const char TEST_CONF[] = "test_incorrect_format.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_incorrect_format = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *modules = NULL;
-    int modules_len = 0;
+    Job *jobs = NULL;
+    int jobs_len = 0;
 
-    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_incorrect_format);
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_incorrect_format);
 
     free(test_conf_incorrect_format);
-    free(modules);
+    free(jobs);
 
-    test_assert(status == PASTA_ERROR_CONFIG_FORMAT);
+    test_assert(status == SCHEDR_ERROR_CONFIG_FORMAT);
 }
 
-static void load_modules_should_return_allocation_failed_error_when_allocation_fails()
+static void load_jobs_should_return_allocation_failed_error_when_allocation_fails()
 {
     static const char TEST_CONF[] = "test_default.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *modules = NULL;
-    int modules_len = 0;
+    Job *jobs = NULL;
+    int jobs_len = 0;
 
-    pasta_config_set_allocator(mock_allocator_will_return_null);
+    schedr_config_set_allocator(mock_allocator_will_return_null);
 
-    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf);
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf);
 
     free(test_conf);
-    free(modules);
+    free(jobs);
 
-    pasta_config_reset_allocator();
+    schedr_config_reset_allocator();
 
-    test_assert(status == PASTA_ERROR_ALLOCATION_FAILED);
+    test_assert(status == SCHEDR_ERROR_ALLOCATION_FAILED);
 }
 
-static void load_modules_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
+static void load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
 {
     static const char TEST_CONF[] = "test_no_permission.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_no_permission = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *modules = NULL;
-    int modules_len = 0;
+    Job *jobs = NULL;
+    int jobs_len = 0;
 
-    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_no_permission);
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_no_permission);
 
     free(test_conf_no_permission);
-    free(modules);
+    free(jobs);
 
-    test_assert(status == PASTA_ERROR_PERMISSION_DENIED);
+    test_assert(status == SCHEDR_ERROR_PERMISSION_DENIED);
 }
 
-static void load_modules_should_return_no_modules_warning_when_config_file_has_no_modules()
+static void load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs()
 {
-    static const char TEST_CONF[] = "test_no_modules.conf";
+    static const char TEST_CONF[] = "test_no_jobs.conf";
     static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf_no_modules = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Module *modules = NULL;
-    int modules_len = 0;
+    char *test_conf_no_jobs = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    Job *jobs = NULL;
+    int jobs_len = 0;
 
-    Status status = pasta_config_load_modules(&modules, &modules_len, test_conf_no_modules);
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_no_jobs);
 
-    free(test_conf_no_modules);
-    free(modules);
+    free(test_conf_no_jobs);
+    free(jobs);
 
-    test_assert(status == PASTA_WARNING_NO_MODULES && modules == NULL && modules_len == 0);
+    test_assert(status == SCHEDR_WARNING_NO_JOBS && jobs == NULL && jobs_len == 0);
 }
 

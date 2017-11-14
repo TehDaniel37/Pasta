@@ -6,8 +6,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-#include "pasta_config_parser.h"
-#include "pasta_module.h"
+#include "schedr_config_parser.h"
+#include "schedr_job.h"
 
 static const size_t MAX_WORD_LEN = 1000;
 
@@ -15,22 +15,22 @@ static void *(*allocator)(size_t bytes) = malloc;
 
 static bool is_unit(const char *str);
 static bool is_digit(const char *str);
-static Status find_number_of_modules(char *file_contents, size_t file_len, size_t *number_of_modules);
+static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *number_of_jobs);
 
 #ifdef TEST
-void pasta_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
-void pasta_config_reset_allocator() { allocator = malloc; }
+void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
+void schedr_config_reset_allocator() { allocator = malloc; }
 #endif
 
-Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const char *filepath)
+Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *filepath)
 {
     static const char DEFAULT_DELIM[] = " \t\r\n\v\f";
     static const char NAME_DELIM[] = "\"";
     static const char CMD_DELIM[] = "`";
 
-    if (*mod != NULL)
+    if (*jobs != NULL)
     {
-        return PASTA_ERROR_INVALID_ARGUMENT;
+        return SCHEDR_ERROR_INVALID_ARGUMENT;
     }
 
     // Read whole file
@@ -40,10 +40,10 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
     if (file_p == NULL)
     {
-        if (errno == EACCES) { return PASTA_ERROR_PERMISSION_DENIED; }
-        if (errno == ENOENT) { return PASTA_ERROR_FILE_NOT_FOUND; }
+        if (errno == EACCES) { return SCHEDR_ERROR_PERMISSION_DENIED; }
+        if (errno == ENOENT) { return SCHEDR_ERROR_FILE_NOT_FOUND; }
 
-        return PASTA_FAILURE;
+        return SCHEDR_FAILURE;
     }
 
     char *file_contents = (char *)allocator(st.st_size + 1);
@@ -51,85 +51,85 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
     if (file_contents == NULL)
     {
         fclose(file_p);
-        return PASTA_ERROR_ALLOCATION_FAILED;
+        return SCHEDR_ERROR_ALLOCATION_FAILED;
     }
 
     size_t len = fread(file_contents, sizeof (char), st.st_size, file_p);
     fclose(file_p);
     file_contents[len] = '\0';
 
-    size_t expected_mods_len = 0;
-    Status status = find_number_of_modules(file_contents, len, &expected_mods_len);
+    size_t expected_jobs_len = 0;
+    Status status = find_number_of_jobs(file_contents, len, &expected_jobs_len);
 
-    if (status != PASTA_SUCCESS)
+    if (status != SCHEDR_SUCCESS)
     {
         free(file_contents);
         return status;
     }
 
-    int modules_count = 0;
-    Module *loaded_modules = (Module *)allocator(sizeof (Module) * expected_mods_len);
-    Module *current_module = NULL;
+    int jobs_count = 0;
+    Job *loaded_jobs = (Job *)allocator(sizeof (Job) * expected_jobs_len);
+    Job *current_job = NULL;
 
-    if (loaded_modules == NULL)
+    if (loaded_jobs == NULL)
     {
         free(file_contents);
-        return PASTA_ERROR_ALLOCATION_FAILED;
+        return SCHEDR_ERROR_ALLOCATION_FAILED;
     }
 
     char *word = strtok(file_contents, DEFAULT_DELIM); 
 
     while (word != NULL)
     {
-        if (modules_count > expected_mods_len)
+        if (jobs_count > expected_jobs_len)
         {
             free(file_contents);
-            free(loaded_modules);
-            return PASTA_ERROR_CONFIG_FORMAT;
+            free(loaded_jobs);
+            return SCHEDR_ERROR_CONFIG_FORMAT;
         }
 
-        if (strncmp("Module", word, MAX_WORD_LEN) == 0)
+        if (strncmp("Job", word, MAX_WORD_LEN) == 0)
         {
-            current_module = &(loaded_modules[modules_count]);
-            pasta_module_init(current_module);
-            modules_count++;
+            current_job = &(loaded_jobs[jobs_count]);
+            schedr_job_init(current_job);
+            jobs_count++;
 
             word = strtok(NULL, NAME_DELIM); 
 
             if (word == NULL)
             {
                 free(file_contents);
-                free(loaded_modules);
-                return PASTA_ERROR_CONFIG_FORMAT;
+                free(loaded_jobs);
+                return SCHEDR_ERROR_CONFIG_FORMAT;
             }
             else
             {
-                pasta_module_set_name(current_module, word, strlen(word));
+                schedr_job_set_name(current_job, word, strlen(word));
             }
         }
 
         else if (strncmp("run", word, MAX_WORD_LEN) == 0)
         {
-            if (current_module != NULL)
+            if (current_job != NULL)
             {
                 word = strtok(NULL, CMD_DELIM);
                 
                 if (word == NULL)
                 {
                     free(file_contents);
-                    free(loaded_modules);
-                    return PASTA_ERROR_CONFIG_FORMAT;
+                    free(loaded_jobs);
+                    return SCHEDR_ERROR_CONFIG_FORMAT;
                 }
                 else
                 {
-                    pasta_module_set_command(current_module, word, strlen(word));
+                    schedr_job_set_command(current_job, word, strlen(word));
                 }
             }
         }
 
         else if (strncmp("every", word, MAX_WORD_LEN) == 0)
         {
-            if (current_module != NULL)
+            if (current_job != NULL)
             {
                 int seconds = 0;
                 char *tok = strtok(NULL, DEFAULT_DELIM);
@@ -139,8 +139,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                 if (tok == NULL)
                 {
                     free(file_contents);
-                    free(loaded_modules);
-                    return PASTA_ERROR_CONFIG_FORMAT;
+                    free(loaded_jobs);
+                    return SCHEDR_ERROR_CONFIG_FORMAT;
                 }
                 else if (is_unit(tok)) 
                 {
@@ -155,8 +155,8 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                     if (tok == NULL)
                     {
                         free(file_contents);
-                        free(loaded_modules);
-                        return PASTA_ERROR_CONFIG_FORMAT;
+                        free(loaded_jobs);
+                        return SCHEDR_ERROR_CONFIG_FORMAT;
                     }
                     else if (is_unit(tok))
                     {
@@ -165,15 +165,15 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                     else 
                     {
                         free(file_contents);
-                        free(loaded_modules);
-                        return PASTA_ERROR_CONFIG_FORMAT;
+                        free(loaded_jobs);
+                        return SCHEDR_ERROR_CONFIG_FORMAT;
                     }
                 }
                 else
                 {
                     free(file_contents);
-                    free(loaded_modules);
-                    return PASTA_ERROR_CONFIG_FORMAT;
+                    free(loaded_jobs);
+                    return SCHEDR_ERROR_CONFIG_FORMAT;
                 }
 
                 seconds = atoi(val);
@@ -195,18 +195,18 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
                 else
                 {
                     free(file_contents);
-                    free(loaded_modules);
-                    return PASTA_ERROR_CONFIG_FORMAT;
+                    free(loaded_jobs);
+                    return SCHEDR_ERROR_CONFIG_FORMAT;
                 }
 
-                pasta_module_set_interval(current_module, seconds);
+                schedr_job_set_interval(current_job, seconds);
             }
         }
         else
         {
             free(file_contents);
-            free(loaded_modules);
-            return PASTA_ERROR_CONFIG_FORMAT;
+            free(loaded_jobs);
+            return SCHEDR_ERROR_CONFIG_FORMAT;
         }
 
         if (word != NULL)
@@ -217,10 +217,10 @@ Status pasta_config_load_modules(Module *mod[], int *loaded_modules_count, const
 
     free(file_contents);
 
-    *mod = loaded_modules;
-    *loaded_modules_count = modules_count;
+    *jobs = loaded_jobs;
+    *loaded_jobs_count = jobs_count;
 
-    return PASTA_SUCCESS;
+    return SCHEDR_SUCCESS;
 }
 
 static bool is_unit(const char *str)
@@ -256,10 +256,10 @@ static bool is_digit(const char *str)
     return true;
 }
 
-static Status find_number_of_modules(char *file_contents, size_t file_len, size_t *number_of_modules)
+static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *number_of_jobs)
 {
     static const char NEW_LINE[] = "\r\n";
-    static const size_t MOD_LEN = 6;
+    static const size_t JOB_LEN = 3;
 
     size_t result = 0;
     
@@ -267,7 +267,7 @@ static Status find_number_of_modules(char *file_contents, size_t file_len, size_
     
     if (cpy == NULL)
     {
-        return PASTA_ERROR_ALLOCATION_FAILED;
+        return SCHEDR_ERROR_ALLOCATION_FAILED;
     }
 
     strncpy(cpy, file_contents, file_len + 1);
@@ -277,20 +277,20 @@ static Status find_number_of_modules(char *file_contents, size_t file_len, size_
 
     while (line != NULL)
     {
-        if (strncmp("Module", line, MOD_LEN) == 0) { result++; }
+        if (strncmp("Job", line, JOB_LEN) == 0) { result++; }
 
         line = strtok(NULL, NEW_LINE);
     }
 
     free(cpy);
 
-    *number_of_modules = result;
+    *number_of_jobs = result;
 
     if (result == 0)
     {
-        return PASTA_WARNING_NO_MODULES;
+        return SCHEDR_WARNING_NO_JOBS;
     }
 
-    return PASTA_SUCCESS;
+    return SCHEDR_SUCCESS;
 }
 

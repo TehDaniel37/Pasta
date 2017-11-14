@@ -1,5 +1,5 @@
 CC = gcc
-TARGET = pasta
+TARGET = schedr
 
 # Compiler flags
 debug_flags = -g -Wall -pedantic -Werror

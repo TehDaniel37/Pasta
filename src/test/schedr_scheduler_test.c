@@ -71,11 +71,6 @@ static void start_job_should_run_job_every_sec()
     test_fail();
 }
 
-static void start_job_should_run_executable_file()
-{
-    test_fail();
-}
-
 static void start_job_should_execute_correct_command_when_command_has_many_arguments()
 {
     test_fail();

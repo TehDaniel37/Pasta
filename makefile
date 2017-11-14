@@ -16,6 +16,7 @@ src_dir = src/main
 test_dir = src/test
 object_dir = obj
 test_object_dir = obj/test
+test_deps_dir = obj/test/deps
 test_resource_dir = res/debug/test
 
 # Files
@@ -23,11 +24,14 @@ sources := $(shell find $(src_dir) -name '*.c')
 objects := $(patsubst $(src_dir)/%.c, $(object_dir)/%.o, $(sources))
 headers := $(shell find $(include_dir) -name '*.h')
 tests := $(shell find $(test_dir) -name '*.c')
+test_objects := $(patsubst $(test_dir)/%.c, $(test_object_dir)/%.o, $(tests))
+test_deps := $(patsubst $(src_dir)/%.c, $(test_deps_dir)/%.o, $(sources))
+test_deps := $(filter-out $(test_deps_dir)/main.o, $(test_deps))
 test_targets := $(patsubst $(test_dir)/%.c, $(test_target_dir)/%, $(tests))
-test_objects := $(filter-out $(object_dir)/main.o, $(objects))
+cov_files := $(patsubst $(test_deps_dir)/%.o, $(test_deps_dir)/%.gcno, $(test_deps))
 
 .PHONY: all
-all: debug
+all: release 
 
 .PHONY: release
 release: CFLAGS=$(release_flags)
@@ -35,11 +39,14 @@ release: target_dir=$(release_target_dir)
 release: create_dirs
 	$(CC) $(CFLAGS) -I $(include_dir) $(sources) -o $(target_dir)/$(TARGET)
 
+# Checks syntax of sources, tests and include files. Also runs static code 
+# analysis through cppcheck.
 .PHONY: check
 check:
 	$(CC) -DTEST -fsyntax-only -I $(include_dir) $(sources) $(tests)
 	cppcheck -q --enable=all -I src/include --language=c --platform=unix64 --std=c11 --suppress=missingIncludeSystem src
 
+# Compile and link debug version of program
 .PHONY: debug
 debug: CFLAGS=$(debug_flags)
 debug: target_dir=$(debug_target_dir)
@@ -47,13 +54,13 @@ debug: build
 
 .PHONY: clean
 clean:
-	rm -rf obj/* bin/debug/* bin/release/*
+	rm -rf obj/* bin/debug/* bin/release/* ./*.c.gcov
 
 .PHONY: create_dirs
-create_dirs: $(test_object_dir) $(test_target_dir) $(release_target_dir)
+create_dirs: $(test_deps_dir) $(test_target_dir) $(release_target_dir)
 
-$(test_object_dir):
-	mkdir -p $(test_object_dir)
+$(test_deps_dir):
+	mkdir -p $(test_deps_dir)
 
 $(test_target_dir):
 	mkdir -p $(test_target_dir)
@@ -68,16 +75,28 @@ build: create_dirs $(objects)
 $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
 
+# Calculate code coverage
+.PHONY: cov
+cov: test
+	gcov $(test_deps_dir)/*.gcno
+
+# Run test cases
 .PHONY: test
 test: CFLAGS=$(test_flags)
 test: create_dirs $(test_targets)
-test:
-	@gcov $(object_dir)/*.gcno
+	for target in $(test_targets) ; do \
+		valgrind -q --track-origins=yes --leak-check=full $$target ; \
+	done
 
-# Compile each test
-$(test_target_dir)/%: $(test_object_dir)/%.o $(test_objects)
-	$(CC) $(CFLAGS) $< $(test_objects) -o $@ 
-	@valgrind -q --track-origins=yes --leak-check=full $@
+# Link and run each test
+$(test_target_dir)/%: $(test_object_dir)/%.o $(test_deps)
+	$(CC) $(CFLAGS) $< $(test_deps) -o $@ 
 
+# Compile tests
 $(test_object_dir)/%.o: $(test_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
+
+# Compile test dependencies
+$(test_deps_dir)/%.o: $(src_dir)/%.c $(headers)
+	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
+

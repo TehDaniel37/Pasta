@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <stdio.h>                  // FILE, fopen(), fclose(), fread()
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>

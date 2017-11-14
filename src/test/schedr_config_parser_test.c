@@ -1,4 +1,3 @@
-#include <stdio.h>          // puts()
 #include <stdlib.h>         // EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>         // strncpy(), strncat()
 
@@ -103,7 +102,6 @@ static void load_jobs_should_load_correct_values_when_config_file_exists_and_has
 
     if (actual_len != expected_len)
     {
-        printf("length differs. was %d but expected %ld\n", actual_len, expected_len);
         test_fail();
         free(actual);
         return;
@@ -111,15 +109,12 @@ static void load_jobs_should_load_correct_values_when_config_file_exists_and_has
 
     if (!job_arrays_equal(expected, expected_len, actual, actual_len))
     {
-        puts("arrays differ");
         test_fail();
         free(actual);
         return;
     }
 
     free(actual);
-
-    printf("status is: %d\n", status);
 
     test_assert(status == SCHEDR_SUCCESS);
 }

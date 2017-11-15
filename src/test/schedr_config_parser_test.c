@@ -1,7 +1,7 @@
 #include <stdlib.h>         // EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>         // strncpy(), strncat()
 
-#include "test.h"
+#include "ssct.h"
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
 #include "schedr_status_codes.h"
@@ -24,15 +24,15 @@ static void load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs
 
 int main(void) 
 {
-    load_jobs_should_load_correct_values_when_config_file_exists_and_has_correct_format();
-    load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null();
-    load_jobs_should_return_file_not_found_error_when_file_does_not_exist();
-    load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format();
-    load_jobs_should_return_allocation_failed_error_when_allocation_fails();
-    load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file();
-    load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs();
+    ssct_run(load_jobs_should_load_correct_values_when_config_file_exists_and_has_correct_format);
+    ssct_run(load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null);
+    ssct_run(load_jobs_should_return_file_not_found_error_when_file_does_not_exist);
+    ssct_run(load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format);
+    ssct_run(load_jobs_should_return_allocation_failed_error_when_allocation_fails);
+    ssct_run(load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file);
+    ssct_run(load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs);
 
-    test_print_summary();
+    ssct_print_summary();
 
     return EXIT_SUCCESS;
 }
@@ -90,7 +90,7 @@ static void load_jobs_should_load_correct_values_when_config_file_exists_and_has
         {.name = "echo_every_2_hours", .command = "echo 'testing interval every 2 hours'", .interval_seconds = 7200, .state = Stopped },
         {.name = "echo_every_hour", .command = "echo 'testing interval every hour'", .interval_seconds = 3600, .state = Stopped}
     };
-    static const size_t expected_len = sizeof (expected) / sizeof (Job);
+    static const int expected_len = sizeof (expected) / sizeof (Job);
 
     char *test_config_valid = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *actual = NULL;
@@ -100,29 +100,18 @@ static void load_jobs_should_load_correct_values_when_config_file_exists_and_has
 
     free(test_config_valid);
 
-    if (actual_len != expected_len)
-    {
-        test_fail();
-        free(actual);
-        return;
-    }
-
-    if (!job_arrays_equal(expected, expected_len, actual, actual_len))
-    {
-        test_fail();
-        free(actual);
-        return;
-    }
+    ssct_assert_equals(actual_len, expected_len);
+    ssct_assert_true(job_arrays_equal(expected, expected_len, actual, actual_len));
 
     free(actual);
 
-    test_assert(status == SCHEDR_SUCCESS);
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
 }
 
 static void load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null()
 {
     static const char TEST_CONF[] = "test_default.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job not_null;
@@ -133,13 +122,13 @@ static void load_jobs_should_return_invalid_argument_error_when_jobs_argument_is
 
     free(test_conf);
 
-    test_assert(status == SCHEDR_ERROR_INVALID_ARGUMENT);
+    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);
 }
 
 static void load_jobs_should_return_file_not_found_error_when_file_does_not_exist()
 {
     static const char TEST_CONF[] = "non_existant.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_non_existant = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *jobs = NULL;
@@ -150,13 +139,13 @@ static void load_jobs_should_return_file_not_found_error_when_file_does_not_exis
     free(test_conf_non_existant);
     free(jobs);
 
-    test_assert(status == SCHEDR_ERROR_FILE_NOT_FOUND);
+    ssct_assert_equals(status, SCHEDR_ERROR_FILE_NOT_FOUND);
 }
 
 static void load_jobs_should_return_config_format_error_when_config_file_has_incorrect_format()
 {
     static const char TEST_CONF[] = "test_incorrect_format.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_incorrect_format = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *jobs = NULL;
@@ -167,13 +156,13 @@ static void load_jobs_should_return_config_format_error_when_config_file_has_inc
     free(test_conf_incorrect_format);
     free(jobs);
 
-    test_assert(status == SCHEDR_ERROR_CONFIG_FORMAT);
+    ssct_assert_equals(status, SCHEDR_ERROR_CONFIG_FORMAT);
 }
 
 static void load_jobs_should_return_allocation_failed_error_when_allocation_fails()
 {
     static const char TEST_CONF[] = "test_default.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *jobs = NULL;
@@ -188,13 +177,13 @@ static void load_jobs_should_return_allocation_failed_error_when_allocation_fail
 
     schedr_config_reset_allocator();
 
-    test_assert(status == SCHEDR_ERROR_ALLOCATION_FAILED);
+    ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
 }
 
 static void load_jobs_should_return_permission_denied_error_when_not_permitted_to_read_config_file()
 {
     static const char TEST_CONF[] = "test_no_permission.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_no_permission = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *jobs = NULL;
@@ -205,13 +194,13 @@ static void load_jobs_should_return_permission_denied_error_when_not_permitted_t
     free(test_conf_no_permission);
     free(jobs);
 
-    test_assert(status == SCHEDR_ERROR_PERMISSION_DENIED);
+    ssct_assert_equals(status, SCHEDR_ERROR_PERMISSION_DENIED);
 }
 
 static void load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs()
 {
     static const char TEST_CONF[] = "test_no_jobs.conf";
-    static const size_t TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
     char *test_conf_no_jobs = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job *jobs = NULL;
@@ -219,9 +208,10 @@ static void load_jobs_should_return_no_jobs_warning_when_config_file_has_no_jobs
 
     Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_no_jobs);
 
+    ssct_assert_equals(status, SCHEDR_WARNING_NO_JOBS);
+    ssct_assert_zero(jobs_len);
+
     free(test_conf_no_jobs);
     free(jobs);
-
-    test_assert(status == SCHEDR_WARNING_NO_JOBS && jobs == NULL && jobs_len == 0);
 }
 

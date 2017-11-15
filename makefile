@@ -1,6 +1,10 @@
 CC = gcc
 TARGET = schedr
 
+# Dependencies
+ssct_h = src/include/ssct.h
+ssct_url = https://github.com/TehDaniel37/ssct.h/raw/master/ssct.h
+
 # Compiler flags
 debug_flags = -g -Wall -pedantic -Werror
 release_flags = -O3
@@ -55,7 +59,7 @@ debug: build
 
 .PHONY: clean
 clean:
-	rm -rf obj/* bin/debug/* bin/release/* $(gcov_dir)
+	rm -rf obj/* bin/debug/* bin/release/* $(gcov_dir) $(ssct_h)
 
 .PHONY: create_dirs
 create_dirs: $(test_deps_dir) $(test_target_dir) $(release_target_dir) $(gcov_dir)
@@ -88,7 +92,7 @@ cov: test
 # Run test cases
 .PHONY: test
 test: CFLAGS=$(test_flags)
-test: create_dirs $(test_targets)
+test: create_dirs $(ssct_h) $(test_targets)
 	for target in $(test_targets) ; do \
 		./$$target ; \
 	done
@@ -111,4 +115,8 @@ $(test_object_dir)/%.o: $(test_dir)/%.c $(headers)
 # Compile test dependencies
 $(test_deps_dir)/%.o: $(src_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
+
+# Download ssct.h
+$(ssct_h):
+	wget -q -O $(include_dir)/ssct.h $(ssct_url)
 

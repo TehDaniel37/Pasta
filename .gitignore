@@ -3,3 +3,4 @@ obj/
 run_tests.sh
 res/debug/test/test_no_permission.conf
 *.gcov
+src/include/ssct.h

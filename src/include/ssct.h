@@ -9,17 +9,17 @@
 #define ssct_run(func)                                                        \
     do                                                                        \
     {                                                                         \
-        assertions_failed = 0;                                                \
+        ssct_assertions_failed = 0;                                                \
         func();                                                               \
-        if (assertions_failed > 0)                                            \
+        if (ssct_assertions_failed > 0)                                            \
         {                                                                     \
-            tests_failed++;                                                   \
+            ssct_tests_failed++;                                                   \
         }                                                                     \
         else                                                                  \
         {                                                                     \
-            tests_completed++;                                                \
+            ssct_tests_successful++;                                                \
         }                                                                     \
-        tests_run++;                                                          \
+        ssct_tests_run++;                                                          \
     }                                                                         \
     while (false)
 
@@ -42,7 +42,7 @@ do                                                                            \
         {                                                                     \
             printf("Assertion failed for %s() on line %d: '%s'\n", __func__, __LINE__, (msg)); \
         }                                                                     \
-        assertions_failed++;                                                  \
+        ssct_assertions_failed++;                                                  \
     }                                                                         \
 } while (false)
 
@@ -64,7 +64,7 @@ do                                                                            \
         {                                                                     \
             printf("Assertion failed for %s() on line %d. Was %d but expected %d.\n",    \
                     (__func__), (__LINE__), (actual), (expected));                        \
-            assertions_failed++;                                              \
+            ssct_assertions_failed++;                                              \
         }                                                                     \
     } while (false)
 
@@ -75,7 +75,7 @@ do                                                                            \
         {                                                                     \
             printf("Assertion failed for %s() on line %d. Was %f but expected %f.\n",    \
                     (__func__), __LINE__, (actual), (expected));                        \
-            assertions_failed++;                                              \
+            ssct_assertions_failed++;                                              \
         }                                                                     \
     } while (false)
 
@@ -89,7 +89,7 @@ do                                                                            \
         {                                                                     \
             printf("Assertion failed for %s() on line %d. Was %s but expected %s.\n",    \
                     (__func__), __LINE__, (actual), (expected));              \
-            assertions_failed++;                                              \
+            ssct_assertions_failed++;                                              \
         }                                                                     \
     } while (false)
 
@@ -102,12 +102,12 @@ do                                                                            \
 #define ssct_print_summary() \
     do \
     { \
-        printf("Test %s: Ran %d test. %d succeeded and %d failed.\n", __FILE__, tests_run, tests_completed, tests_failed); \
+        printf("Test %s: Ran %d test. %d succeeded and %d failed.\n\n", __FILE__, ssct_tests_run, ssct_tests_successful, ssct_tests_failed); \
     } while(false)
 
-int assertions_failed;
-int tests_run = 0;
-int tests_completed = 0;
-int tests_failed = 0;
+static int ssct_assertions_failed;
+static int ssct_tests_run = 0;
+static int ssct_tests_successful = 0;
+static int ssct_tests_failed = 0;
 
 #endif /* SSCT_H */

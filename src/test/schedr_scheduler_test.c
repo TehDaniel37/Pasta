@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "test.h"
+#include "ssct.h"
 #include "schedr_status_codes.h"
 #include "schedr_scheduler.h"
 
@@ -22,17 +22,17 @@ static void stop_job_should_terminate_process();
 
 int main(void)
 {
-    start_job_should_start_a_new_process();
-    start_job_should_run_executable_file();
-    start_job_should_run_job_every_sec();
-    start_job_should_execute_correct_command_when_command_has_many_arguments();
-    start_job_should_execute_correct_command_when_command_contains_shell_builtins();
-    start_job_should_return_permission_denied_error_when_not_permitted_to_run_command();
-    start_job_should_return_command_not_found_error_when_command_does_not_exist();
+    ssct_run(start_job_should_start_a_new_process);
+    ssct_run(start_job_should_run_executable_file);
+    ssct_run(start_job_should_run_job_every_sec);
+    ssct_run(start_job_should_execute_correct_command_when_command_has_many_arguments);
+    ssct_run(start_job_should_execute_correct_command_when_command_contains_shell_builtins);
+    ssct_run(start_job_should_return_permission_denied_error_when_not_permitted_to_run_command);
+    ssct_run(start_job_should_return_command_not_found_error_when_command_does_not_exist);
 
-    stop_job_should_terminate_process();
+    ssct_run(stop_job_should_terminate_process);
 
-    test_print_summary();
+    ssct_print_summary();
 
     return EXIT_SUCCESS;
 }
@@ -58,41 +58,42 @@ static void start_job_should_start_a_new_process()
     Status status = schedr_scheduler_start_job(&job);
     pid_t job_pid = schedr_scheduler_get_job_pid(&job);
 
-    test_assert(process_exists(job_pid) && status == SCHEDR_SUCCESS);
+    ssct_assert_true(process_exists(job_pid)); 
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
 }
 
 static void start_job_should_run_executable_file()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void start_job_should_run_job_every_sec()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void start_job_should_execute_correct_command_when_command_has_many_arguments()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void start_job_should_execute_correct_command_when_command_contains_shell_builtins()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void start_job_should_return_permission_denied_error_when_not_permitted_to_run_command()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void start_job_should_return_command_not_found_error_when_command_does_not_exist()
 {
-    test_fail();
+    ssct_fail();
 }
 
 static void stop_job_should_terminate_process()
 {
-    test_fail();
+    ssct_fail();
 }
 

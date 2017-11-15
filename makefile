@@ -18,6 +18,7 @@ object_dir = obj
 test_object_dir = obj/test
 test_deps_dir = obj/test/deps
 test_resource_dir = res/debug/test
+gcov_dir = gcov
 
 # Files
 sources := $(shell find $(src_dir) -name '*.c')
@@ -54,10 +55,10 @@ debug: build
 
 .PHONY: clean
 clean:
-	rm -rf obj/* bin/debug/* bin/release/* ./*.c.gcov
+	rm -rf obj/* bin/debug/* bin/release/* $(gcov_dir)
 
 .PHONY: create_dirs
-create_dirs: $(test_deps_dir) $(test_target_dir) $(release_target_dir)
+create_dirs: $(test_deps_dir) $(test_target_dir) $(release_target_dir) $(gcov_dir)
 
 $(test_deps_dir):
 	mkdir -p $(test_deps_dir)
@@ -67,6 +68,9 @@ $(test_target_dir):
 
 $(release_target_dir):
 	mkdir -p $(release_target_dir)
+
+$(gcov_dir):
+	mkdir -p $(gcov_dir)
 
 .PHONY: build
 build: create_dirs $(objects)
@@ -78,7 +82,8 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 # Calculate code coverage
 .PHONY: cov
 cov: test
-	gcov $(test_deps_dir)/*.gcno
+	gcov $(test_deps_dir)/*.gcno 
+	mv ./*.c.gcov $(gcov_dir)
 
 # Run test cases
 .PHONY: test

@@ -6,20 +6,30 @@
 #include <string.h>
 #include <math.h>
 
+static void (*ssct_setup)() = NULL;
+static void (*ssct_teardown)() = NULL;
+
+static int ssct_assertions_failed;
+static int ssct_tests_run = 0;
+static int ssct_tests_successful = 0;
+static int ssct_tests_failed = 0;
+
 #define ssct_run(func)                                                        \
     do                                                                        \
     {                                                                         \
-        ssct_assertions_failed = 0;                                                \
+        if (ssct_setup != NULL) { ssct_setup(); }                             \
+        ssct_assertions_failed = 0;                                           \
         func();                                                               \
-        if (ssct_assertions_failed > 0)                                            \
+        if (ssct_assertions_failed > 0)                                       \
         {                                                                     \
-            ssct_tests_failed++;                                                   \
+            ssct_tests_failed++;                                              \
         }                                                                     \
         else                                                                  \
         {                                                                     \
-            ssct_tests_successful++;                                                \
+            ssct_tests_successful++;                                          \
         }                                                                     \
-        ssct_tests_run++;                                                          \
+        ssct_tests_run++;                                                     \
+        if (ssct_teardown != NULL) { ssct_teardown(); }                       \
     }                                                                         \
     while (false)
 
@@ -104,10 +114,5 @@ do                                                                            \
     { \
         printf("Test %s: Ran %d test. %d succeeded and %d failed.\n\n", __FILE__, ssct_tests_run, ssct_tests_successful, ssct_tests_failed); \
     } while(false)
-
-static int ssct_assertions_failed;
-static int ssct_tests_run = 0;
-static int ssct_tests_successful = 0;
-static int ssct_tests_failed = 0;
 
 #endif /* SSCT_H */

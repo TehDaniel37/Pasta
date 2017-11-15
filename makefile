@@ -90,7 +90,14 @@ cov: test
 test: CFLAGS=$(test_flags)
 test: create_dirs $(test_targets)
 	for target in $(test_targets) ; do \
-		valgrind -q --track-origins=yes --leak-check=full $$target ; \
+		./$$target ; \
+	done
+
+.PHONY: memcheck
+memcheck: CFLAGS=$(test_flags)
+memcheck: create_dirs $(test_targets)
+	for target in $(test_targets) ; do \
+		valgrind -q --log-fd=2 --track-origins=yes --leak-check=full $$target 1>/dev/null ; \
 	done
 
 # Link and run each test

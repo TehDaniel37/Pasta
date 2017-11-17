@@ -3,97 +3,68 @@
 #include <signal.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <stdatomic.h>
+#include <sys/mman.h>
 
 #include "ssct.h"
 #include "schedr_status_codes.h"
 #include "schedr_scheduler.h"
 
-static bool process_exists(pid_t pid);
+static bool *mock_exec_called;
+static bool *mock_exec_correct_params;
 
-static void start_job_should_start_a_new_process();
-static void start_job_should_run_executable_file();
-static void start_job_should_run_job_every_sec();
-static void start_job_should_execute_correct_command_when_command_has_many_arguments();
-static void start_job_should_execute_correct_command_when_command_contains_shell_builtins();
-static void start_job_should_return_permission_denied_error_when_not_permitted_to_run_command();
-static void start_job_should_return_command_not_found_error_when_command_does_not_exist();
+#define mock_exec_expected_params "echo should call exec"
 
-static void stop_job_should_terminate_process();
+/*
+ * Credit: slezica
+ * https://stackoverflow.com/a/5656561
+ */
+static void *create_shared_memory(size_t bytes) 
+{
+    int protection = PROT_READ | PROT_WRITE;
+    int visibility = MAP_ANONYMOUS | MAP_SHARED;
+    return mmap(NULL, bytes, protection, visibility, 0, 0);
+}
+
+static int mock_exec(const char *file_name, char *const argv[], char *const envp[])
+{
+    *mock_exec_called = true;
+    
+    if (strcmp(argv[2], mock_exec_expected_params))
+    {
+       *mock_exec_correct_params = true;
+    }
+
+    return 0;
+}
+
+static void start_job_should_call_exec_with_correct_params()
+{
+    mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
+    mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
+
+    Job job = {.name = "Test", .command = mock_exec_expected_params,
+        .interval_seconds = 0, .state = Stopped};
+
+    schedr_scheduler_set_exec(mock_exec);
+
+    Status status = schedr_scheduler_start_job(&job);
+
+    ssct_assert_true(*mock_exec_called);
+    ssct_assert_true(*mock_exec_correct_params);
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
+
+    schedr_scheduler_reset_exec();
+    
+    munmap(mock_exec_called, sizeof (bool));
+    munmap(mock_exec_correct_params, sizeof(bool));
+}
 
 int main(void)
 {
-    ssct_run(start_job_should_start_a_new_process);
-    ssct_run(start_job_should_run_executable_file);
-    ssct_run(start_job_should_run_job_every_sec);
-    ssct_run(start_job_should_execute_correct_command_when_command_has_many_arguments);
-    ssct_run(start_job_should_execute_correct_command_when_command_contains_shell_builtins);
-    ssct_run(start_job_should_return_permission_denied_error_when_not_permitted_to_run_command);
-    ssct_run(start_job_should_return_command_not_found_error_when_command_does_not_exist);
-
-    ssct_run(stop_job_should_terminate_process);
+    ssct_run(start_job_should_call_exec_with_correct_params);
 
     ssct_print_summary();
 
     return EXIT_SUCCESS;
 }
-
-static bool process_exists(pid_t pid)
-{
-    int return_code = kill(pid, 0);
-
-    if (return_code != 0 && errno == ESRCH)
-    {
-        return false;
-    }
-    else
-    {
-        return true;
-    }
-}
-
-static void start_job_should_start_a_new_process()
-{
-    Job job = {.name = "testing", .command = "echo hello", .interval_seconds = 1, .state = Stopped};
-
-    Status status = schedr_scheduler_start_job(&job);
-    pid_t job_pid = schedr_scheduler_get_job_pid(&job);
-
-    ssct_assert_true(process_exists(job_pid)); 
-    ssct_assert_equals(status, SCHEDR_SUCCESS);
-}
-
-static void start_job_should_run_executable_file()
-{
-    ssct_fail();
-}
-
-static void start_job_should_run_job_every_sec()
-{
-    ssct_fail();
-}
-
-static void start_job_should_execute_correct_command_when_command_has_many_arguments()
-{
-    ssct_fail();
-}
-
-static void start_job_should_execute_correct_command_when_command_contains_shell_builtins()
-{
-    ssct_fail();
-}
-
-static void start_job_should_return_permission_denied_error_when_not_permitted_to_run_command()
-{
-    ssct_fail();
-}
-
-static void start_job_should_return_command_not_found_error_when_command_does_not_exist()
-{
-    ssct_fail();
-}
-
-static void stop_job_should_terminate_process()
-{
-    ssct_fail();
-}
-

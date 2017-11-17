@@ -10,9 +10,8 @@
 #include <schedr_status_codes.h>
 
 #ifdef TEST
-#include <sys/types.h>
-
-pid_t schedr_scheduler_get_job_pid(const Job *const job_p);
+void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[]));
+void schedr_scheduler_reset_exec();
 #endif
 
 /*

@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <stdlib.h>         // getenv
 #include <unistd.h>         // fork
+#include <sys/wait.h>
 
 #include "schedr_scheduler.h"
 
@@ -27,8 +28,10 @@ Status schedr_scheduler_start_job(Job *job_p)
         exec(argv[0], argv, environ);
         _Exit(EXIT_FAILURE);
     }
-    else                        // executed by parent
+    else
     {
+        int child_status;
+        waitpid(job_pid, &child_status, 0);
     }
 
     return SCHEDR_SUCCESS;

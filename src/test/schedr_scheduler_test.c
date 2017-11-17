@@ -29,10 +29,10 @@ static void *create_shared_memory(size_t bytes)
 static int mock_exec(const char *file_name, char *const argv[], char *const envp[])
 {
     *mock_exec_called = true;
-    
-    if (strcmp(argv[2], mock_exec_expected_params))
+
+    if (strcmp(argv[2], mock_exec_expected_params) == 0)
     {
-       *mock_exec_correct_params = true;
+        *mock_exec_correct_params = true;
     }
 
     return 0;
@@ -42,6 +42,8 @@ static void start_job_should_call_exec_with_correct_params()
 {
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
+    *mock_exec_called = false;
+    *mock_exec_correct_params = false; 
 
     Job job = {.name = "Test", .command = mock_exec_expected_params,
         .interval_seconds = 0, .state = Stopped};
@@ -55,7 +57,6 @@ static void start_job_should_call_exec_with_correct_params()
     ssct_assert_equals(status, SCHEDR_SUCCESS);
 
     schedr_scheduler_reset_exec();
-    
     munmap(mock_exec_called, sizeof (bool));
     munmap(mock_exec_correct_params, sizeof(bool));
 }

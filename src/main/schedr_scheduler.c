@@ -1,9 +1,7 @@
-#include <stdbool.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <stdlib.h>         // getenv
-#include <unistd.h>         // fork
-#include <sys/wait.h>
+#include <sys/types.h>      // pid_t
+#include <stdlib.h>         // getenv()
+#include <unistd.h>         // fork(), execve()
+#include <sys/wait.h>       // waitpid()
 
 #include "schedr_scheduler.h"
 

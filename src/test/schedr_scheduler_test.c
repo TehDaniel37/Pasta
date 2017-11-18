@@ -38,31 +38,39 @@ static int mock_exec(const char *file_name, char *const argv[], char *const envp
     return 0;
 }
 
-static void start_job_should_call_exec_with_correct_params()
+static void setup() 
 {
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
     *mock_exec_called = false;
     *mock_exec_correct_params = false; 
-
-    Job job = {.name = "Test", .command = mock_exec_expected_params,
-        .interval_seconds = 0, .state = Stopped};
-
+    
     schedr_scheduler_set_exec(mock_exec);
+}
 
-    Status status = schedr_scheduler_start_job(&job);
-
-    ssct_assert_true(*mock_exec_called);
-    ssct_assert_true(*mock_exec_correct_params);
-    ssct_assert_equals(status, SCHEDR_SUCCESS);
-
+static void teardown()
+{
     schedr_scheduler_reset_exec();
     munmap(mock_exec_called, sizeof (bool));
     munmap(mock_exec_correct_params, sizeof(bool));
 }
 
+static void start_job_should_call_exec_with_correct_params()
+{
+    Job job = {.name = "Test", .command = mock_exec_expected_params,
+        .interval_seconds = 0, .state = Stopped};
+
+    schedr_scheduler_start_job(&job);
+
+    ssct_assert_true(*mock_exec_called);
+    ssct_assert_true(*mock_exec_correct_params);
+}
+
 int main(void)
 {
+    ssct_setup = setup;
+    ssct_teardown = teardown;
+
     ssct_run(start_job_should_call_exec_with_correct_params);
 
     ssct_print_summary();

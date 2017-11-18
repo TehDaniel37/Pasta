@@ -49,23 +49,22 @@ static int mock_exec_will_wait_indefinitely(const char *file_name, char *const a
 
 static void setup() 
 {
+}
+
+static void teardown()
+{
+    schedr_scheduler_reset_exec();
+}
+
+static void start_job_should_call_exec_with_correct_params()
+{
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
     *mock_exec_called = false;
     *mock_exec_correct_params = false; 
     
     schedr_scheduler_set_exec(mock_exec);
-}
 
-static void teardown()
-{
-    schedr_scheduler_reset_exec();
-    munmap(mock_exec_called, sizeof (bool));
-    munmap(mock_exec_correct_params, sizeof(bool));
-}
-
-static void start_job_should_call_exec_with_correct_params()
-{
     Job job = {.name = "Test", .command = mock_exec_expected_params,
         .interval_seconds = 0, .state = Stopped};
 
@@ -73,6 +72,9 @@ static void start_job_should_call_exec_with_correct_params()
 
     ssct_assert_true(*mock_exec_called);
     ssct_assert_true(*mock_exec_correct_params);
+
+    munmap(mock_exec_called, sizeof (bool));
+    munmap(mock_exec_correct_params, sizeof(bool));
 }
 
 static void start_job_should_return_success_when_job_starts_successfully()

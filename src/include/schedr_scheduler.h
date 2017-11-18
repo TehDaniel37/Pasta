@@ -12,6 +12,7 @@
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[]));
 void schedr_scheduler_reset_exec();
+pid_t schedr_scheduler_get_job_pid(Job *job_p);
 #endif
 
 /*

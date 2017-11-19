@@ -44,6 +44,7 @@ static int mock_exec_will_exec_true(const char *file_name, char *const argv[], c
 
 static void setup() 
 {
+
 }
 
 static void teardown()
@@ -60,8 +61,7 @@ static void start_job_should_call_exec_with_correct_params()
     
     schedr_scheduler_set_exec(mock_exec);
 
-    Job job = {.name = "Test", .command = mock_exec_expected_params,
-        .interval_seconds = 0, .state = Stopped};
+    Job job = { .name = "Test", .command = mock_exec_expected_params, .interval_seconds = 0, .state = Stopped };
 
     schedr_scheduler_start_job(&job);
 
@@ -74,13 +74,23 @@ static void start_job_should_call_exec_with_correct_params()
 
 static void start_job_should_return_success_when_job_starts_successfully()
 {
-    Job job = {.name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped};
+    Job job = { .name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped };
 
     schedr_scheduler_set_exec(mock_exec_will_exec_true);
 
     Status status = schedr_scheduler_start_job(&job);
 
     ssct_assert_equals(status, SCHEDR_SUCCESS);
+}
+
+static void start_job_should_set_job_state_to_running()
+{
+    Job job = { .name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped };
+
+    schedr_scheduler_set_exec(mock_exec_will_exec_true);
+    schedr_scheduler_start_job(&job);
+
+    ssct_assert_equals(job.state, Running);
 }
 
 int main(void)
@@ -90,6 +100,7 @@ int main(void)
 
     ssct_run(start_job_should_call_exec_with_correct_params);
     ssct_run(start_job_should_return_success_when_job_starts_successfully);
+    ssct_run(start_job_should_set_job_state_to_running);
 
     ssct_print_summary();
 

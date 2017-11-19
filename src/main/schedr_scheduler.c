@@ -15,6 +15,7 @@ static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = exe
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[])) { exec = exec_func; }
 void schedr_scheduler_reset_exec() { exec = execve; }
+void __gcov_flush();
 #endif
 
 Status schedr_scheduler_start_job(Job *job_p)
@@ -43,7 +44,12 @@ Status schedr_scheduler_start_job(Job *job_p)
             exit_status = EXIT_FAILURE;
             write(file_desc_child, &exit_status, sizeof(exit_status));
             close(file_desc_child);
-            _Exit(EXIT_FAILURE);
+            
+            #ifdef TEST
+            __gcov_flush();
+            #endif
+            
+            _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
         }
         else if (cmd_pid == 0)
         {
@@ -53,7 +59,12 @@ Status schedr_scheduler_start_job(Job *job_p)
             char *argv[] = { shell, "-c", job_p->command, NULL };
             
             exec(argv[0], argv, environ);
-            _Exit(EXIT_FAILURE);
+            
+            #ifdef TEST
+            __gcov_flush();
+            #endif
+            
+            _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
         }
         else 
         {
@@ -63,7 +74,12 @@ Status schedr_scheduler_start_job(Job *job_p)
             exit_status = WEXITSTATUS(cmd_status);
             write(file_desc_child, &exit_status, sizeof(exit_status));
             close(file_desc_child);
-            _Exit(EXIT_SUCCESS);
+            
+            #ifdef TEST
+            __gcov_flush();
+            #endif
+            
+            _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
         }
     }
     else

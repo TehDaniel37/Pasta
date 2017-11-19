@@ -83,7 +83,8 @@ Status schedr_scheduler_start_job(Job *job_p)
         {
             close(file_desc_parent);
 
-            return SCHEDR_FAILURE;
+            if (buffer == 127) { return SCHEDR_ERROR_COMMAND_NOT_FOUND; }
+            else { return SCHEDR_FAILURE; }
         }
     }
 }

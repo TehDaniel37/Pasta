@@ -37,14 +37,9 @@ static int mock_exec(const char *file_name, char *const argv[], char *const envp
     return 0;
 }
 
-static int mock_exec_will_wait_indefinitely(const char *file_name, char *const argv[], char *const envp[])
+static int mock_exec_will_exec_true(const char *file_name, char *const argv[], char *const envp[])
 {
-    while (true)
-    {
-        sleep(1);
-    }
-
-    return EXIT_FAILURE;
+    return execlp("true", "true", NULL);
 }
 
 static void setup() 
@@ -81,14 +76,11 @@ static void start_job_should_return_success_when_job_starts_successfully()
 {
     Job job = {.name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped};
 
-    schedr_scheduler_set_exec(mock_exec_will_wait_indefinitely);
+    schedr_scheduler_set_exec(mock_exec_will_exec_true);
 
     Status status = schedr_scheduler_start_job(&job);
 
     ssct_assert_equals(status, SCHEDR_SUCCESS);
-
-    pid_t child_pid = schedr_scheduler_get_job_pid(&job);
-    kill(child_pid, SIGTERM);
 }
 
 int main(void)

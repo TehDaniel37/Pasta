@@ -6,6 +6,8 @@
 
 #include "schedr_scheduler.h"
 
+#define SHELL_ERROR_CMD_NOT_FOUND 127
+
 extern char *environ[];
 
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
@@ -83,7 +85,7 @@ Status schedr_scheduler_start_job(Job *job_p)
         {
             close(file_desc_parent);
 
-            if (buffer == 127) { return SCHEDR_ERROR_COMMAND_NOT_FOUND; }
+            if (buffer == SHELL_ERROR_CMD_NOT_FOUND ) { return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND; }
             else { return SCHEDR_FAILURE; }
         }
     }

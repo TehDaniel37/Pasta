@@ -99,7 +99,7 @@ static void start_job_should_return_command_not_found_error()
 
     Status status = schedr_scheduler_start_job(&job);
 
-    ssct_assert_equals(status, SCHEDR_ERROR_COMMAND_NOT_FOUND);
+    ssct_assert_equals(status, SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND);
 }
 
 int main(void)

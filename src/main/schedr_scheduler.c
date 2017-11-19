@@ -69,7 +69,12 @@ Status schedr_scheduler_start_job(Job *job_p)
 
         read(file_desc_parent, &buffer, sizeof(buffer));
 
-        if (buffer == 0) { return SCHEDR_SUCCESS; }
+        if (buffer == 0) 
+        {
+            job_p->state = Running;
+            
+            return SCHEDR_SUCCESS;
+        }
         else { return SCHEDR_FAILURE; }
     }
 }

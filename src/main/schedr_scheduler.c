@@ -15,6 +15,7 @@ static void (*on_fork_hook)(void) = NULL;
 
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
+static unsigned int (*sleeper)(unsigned int seconds) = sleep;
 
 static pid_t temp_job_pid;
 
@@ -23,6 +24,8 @@ void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv
 void schedr_scheduler_reset_exec() { exec = execve; }
 void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
+void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
+void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
 void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void)) { on_fork_hook = on_fork; }
 void schedr_scheduler_remove_on_fork_hook() { on_fork_hook = NULL; }
 pid_t schedr_scheduler_get_child_pid() { return temp_job_pid; }
@@ -98,7 +101,7 @@ static void child_proc(Job *job_p, int pipe)
         
         if (exit_status == EXIT_SUCCESS) 
         {
-            sleep(job_p->interval_seconds);
+            sleeper(job_p->interval_seconds);
         }
         
     } while (exit_status == EXIT_SUCCESS);

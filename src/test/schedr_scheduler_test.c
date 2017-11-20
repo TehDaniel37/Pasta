@@ -53,7 +53,7 @@ static int mock_exec_will_count_times_called(const char *file_name, char *const 
 
 static pid_t mock_fork_will_fail(void) { return -1; }
 
-static int mock_sleep(int seconds) 
+static unsigned int mock_sleep(unsigned int seconds) 
 { 
     *mock_sleep_correct_params = true; 
     return 0;
@@ -180,12 +180,13 @@ static void start_job_should_call_exec_repeatedly()
 
 static void start_job_should_pass_correct_argument_to_sleep()
 {
-    const int expected_time = 1;
+    const int expected_time = 3600;
     
     Job job = { .name = "Test", .command = "dfoko", .interval_seconds = expected_time, .state = Stopped };
     
     mock_sleep_correct_params = (bool *)create_shared_memory(sizeof (bool));
     
+    schedr_scheduler_set_exec(mock_exec_will_exec_true);
     schedr_scheduler_set_sleeper(mock_sleep);
     schedr_scheduler_start_job(&job);
     
@@ -208,6 +209,7 @@ int main(void)
     ssct_run(start_job_should_return_fork_failed_error);
     ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
     ssct_run(start_job_should_call_exec_repeatedly);
+    ssct_run(start_job_should_pass_correct_argument_to_sleep);
 
     ssct_print_summary();
 

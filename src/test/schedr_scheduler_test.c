@@ -199,6 +199,15 @@ static void start_job_should_pass_3600_seconds_to_sleep()
     munmap(mock_sleep_correct_params, sizeof (bool));
 }
 
+static void start_job_should_return_invalid_syntax_error() 
+{
+    Job job = { .name = "Test", .command = "while true do echo hello done &>/dev/null", .interval_seconds = 0, .state = Stopped };
+    
+    Status status schedr_scheduler_start_job(&job);
+    
+    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_SYNTAX_ERROR);
+}
+
 int main(void)
 {
     ssct_setup = setup;
@@ -212,7 +221,8 @@ int main(void)
     ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
     ssct_run(start_job_should_call_exec_repeatedly);
     ssct_run(start_job_should_pass_3600_seconds_to_sleep);
-
+    ssct_run(start_job_should_return_invalid_syntax_error);
+    
     ssct_print_summary();
 
     return EXIT_SUCCESS;

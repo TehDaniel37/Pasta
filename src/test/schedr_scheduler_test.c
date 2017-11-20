@@ -52,6 +52,7 @@ static void setup()
 static void teardown()
 {
     schedr_scheduler_reset_exec();
+    schedr_scheduler_reset_forker();
 }
 
 static void start_job_should_call_exec_with_correct_params()

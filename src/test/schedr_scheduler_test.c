@@ -15,6 +15,7 @@ static int *times_exec_called;
 static bool *mock_sleep_correct_params;
 
 #define mock_exec_expected_params "echo should call exec"
+#define mock_sleep_expected_param 3600
 
 /*
  * Credit: slezica
@@ -54,8 +55,12 @@ static int mock_exec_will_count_times_called(const char *file_name, char *const 
 static pid_t mock_fork_will_fail(void) { return -1; }
 
 static unsigned int mock_sleep(unsigned int seconds) 
-{ 
-    *mock_sleep_correct_params = true; 
+{
+    if (seconds == mock_sleep_expected_param)
+    {
+        *mock_sleep_correct_params = true; 
+    }
+    
     return 0;
 }
 
@@ -69,6 +74,7 @@ static void teardown()
     schedr_scheduler_reset_exec();
     schedr_scheduler_reset_forker();
     schedr_scheduler_remove_on_fork_hook();
+    schedr_scheduler_reset_sleeper();
     kill(schedr_scheduler_get_child_pid(), SIGTERM);
 }
 
@@ -178,11 +184,9 @@ static void start_job_should_call_exec_repeatedly()
     munmap(times_exec_called, sizeof (int));
 }
 
-static void start_job_should_pass_correct_argument_to_sleep()
+static void start_job_should_pass_3600_seconds_to_sleep()
 {
-    const int expected_time = 3600;
-    
-    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = expected_time, .state = Stopped };
+    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = mock_sleep_expected_param, .state = Stopped };
     
     mock_sleep_correct_params = (bool *)create_shared_memory(sizeof (bool));
     
@@ -191,8 +195,6 @@ static void start_job_should_pass_correct_argument_to_sleep()
     schedr_scheduler_start_job(&job);
     
     ssct_assert_true(mock_sleep_correct_params);
-    
-    schedr_scheduler_reset_sleeper();
     
     munmap(mock_sleep_correct_params, sizeof (bool));
 }
@@ -209,7 +211,7 @@ int main(void)
     ssct_run(start_job_should_return_fork_failed_error);
     ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
     ssct_run(start_job_should_call_exec_repeatedly);
-    ssct_run(start_job_should_pass_correct_argument_to_sleep);
+    ssct_run(start_job_should_pass_3600_seconds_to_sleep);
 
     ssct_print_summary();
 

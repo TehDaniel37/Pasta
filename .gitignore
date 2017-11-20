@@ -5,3 +5,5 @@ res/debug/test/test_no_permission.conf
 *.gcov
 src/include/ssct.h
 .vscode
+schedr.geany
+

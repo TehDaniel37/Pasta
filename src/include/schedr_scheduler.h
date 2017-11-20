@@ -12,6 +12,8 @@
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[]));
 void schedr_scheduler_reset_exec();
+void schedr_scheduler_set_forker(int (*fork_func)(void));
+void schedr_scheduler_reset_forker();
 #endif
 
 /*

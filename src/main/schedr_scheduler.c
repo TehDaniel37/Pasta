@@ -11,10 +11,13 @@
 extern char *environ[];
 
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
+static int (*forker)(void) = fork;
 
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[])) { exec = exec_func; }
 void schedr_scheduler_reset_exec() { exec = execve; }
+void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
+void schedr_scheduler_reset_forker() { forker = fork; }
 void __gcov_flush();
 #endif
 

@@ -42,6 +42,8 @@ static int mock_exec_will_exec_true(const char *file_name, char *const argv[], c
     return execlp("true", "true", NULL);
 }
 
+static pid_t mock_fork_will_fail(void) { return -1; }
+
 static void setup() 
 {
 
@@ -102,6 +104,16 @@ static void start_job_should_return_command_not_found_error()
     ssct_assert_equals(status, SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND);
 }
 
+static void start_job_should_return_fork_failed_error()
+{
+    Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
+
+    schedr_scheduler_set_forker(mock_fork_will_fail);
+    Status status = schedr_scheduler_start_job(&job);
+    
+    ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
+}
+
 int main(void)
 {
     ssct_setup = setup;
@@ -111,6 +123,7 @@ int main(void)
     ssct_run(start_job_should_return_success_when_job_starts_successfully);
     ssct_run(start_job_should_set_job_state_to_running);
     ssct_run(start_job_should_return_command_not_found_error);
+    ssct_run(start_job_should_return_fork_failed_error);
 
     ssct_print_summary();
 

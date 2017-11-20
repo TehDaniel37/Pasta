@@ -53,6 +53,7 @@ static void teardown()
 {
     schedr_scheduler_reset_exec();
     schedr_scheduler_reset_forker();
+    schedr_scheduler_remove_on_fork_hook();
 }
 
 static void start_job_should_call_exec_with_correct_params()
@@ -110,6 +111,21 @@ static void start_job_should_return_fork_failed_error()
     Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
 
     schedr_scheduler_set_forker(mock_fork_will_fail);
+    Status status = schedr_scheduler_start_job(&job);
+    
+    ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
+}
+
+static void on_fork(void)
+{
+    schedr_scheduler_set_forker(mock_fork_will_fail);
+}
+
+static void start_job_should_return_fork_failed_error_when_child_fork_fails()
+{   
+    Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
+    
+    schedr_scheduler_set_on_fork(on_fork);
     Status status = schedr_scheduler_start_job(&job);
     
     ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);

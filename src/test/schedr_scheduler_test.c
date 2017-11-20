@@ -11,6 +11,7 @@
 
 static bool *mock_exec_called;
 static bool *mock_exec_correct_params;
+static int *times_exec_called;
 
 #define mock_exec_expected_params "echo should call exec"
 
@@ -39,6 +40,13 @@ static int mock_exec(const char *file_name, char *const argv[], char *const envp
 
 static int mock_exec_will_exec_true(const char *file_name, char *const argv[], char *const envp[])
 {
+    return execlp("true", "true", NULL);
+}
+
+static int mock_exec_will_count_times_called(const char *file_name, char *const argv[], char *const envp[])
+{
+    *times_exec_called += 1;
+    
     return execlp("true", "true", NULL);
 }
 
@@ -131,6 +139,31 @@ static void start_job_should_return_fork_failed_error_when_child_fork_fails()
     ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
 }
 
+static void start_job_should_call_exec_repeatedly()
+{
+    const int MICROSECS_PER_MILLISEC = 1000;
+    const int WAIT_MILLISEC = 10;
+    
+    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = 0, .state = Stopped };
+    times_exec_called = (int *)create_shared_memory(sizeof (int));
+    *times_exec_called = 0;
+    
+    schedr_scheduler_set_exec(mock_exec_will_count_times_called);
+    
+    schedr_scheduler_start_job(&job);
+    
+    while (*times_exec_called < 10) 
+    {
+        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
+    }
+    
+    ssct_assert_true(*times_exec_called >= 10);
+
+    pid_t child_pid = schedr_scheduler_get_child_pid();
+    kill(child_pid, SIGTERM);
+    munmap(times_exec_called, sizeof (int));
+}
+
 int main(void)
 {
     ssct_setup = setup;
@@ -142,6 +175,7 @@ int main(void)
     ssct_run(start_job_should_return_command_not_found_error);
     ssct_run(start_job_should_return_fork_failed_error);
     ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
+    ssct_run(start_job_should_call_exec_repeatedly);
 
     ssct_print_summary();
 

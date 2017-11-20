@@ -145,7 +145,7 @@ static void on_fork(void)
 
 static void start_job_should_return_fork_failed_error_when_child_fork_fails()
 {   
-    Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
+    Job job = { .name = "Test", .command = "echo", .interval_seconds = 1, .state = Stopped };
     
     schedr_scheduler_set_on_fork_hook(on_fork);
     Status status = schedr_scheduler_start_job(&job);
@@ -203,9 +203,9 @@ static void start_job_should_return_invalid_syntax_error()
 {
     Job job = { .name = "Test", .command = "while true do echo hello done &>/dev/null", .interval_seconds = 0, .state = Stopped };
     
-    Status status schedr_scheduler_start_job(&job);
+    Status status = schedr_scheduler_start_job(&job);
     
-    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_SYNTAX_ERROR);
+    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_SYNTAX);
 }
 
 int main(void)

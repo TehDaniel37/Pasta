@@ -82,6 +82,30 @@ static void write_exit_status_to_parent(int status, int pipe)
     close(pipe);
 }
 
+static int check_cmd(Job *job_p, int pipe)
+{
+    pid_t cmd_pid;
+    
+    if ((cmd_pid = forker()) == 0) 
+    {
+        char *shell = getenv("SHELL");
+        char *argv[] = { shell, "-n", "-c", job_p->command, NULL };
+        exec(argv[0], argv, environ);
+        
+        #ifdef TEST
+        __gcov_flush();
+        #endif
+        
+        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+    }
+    else
+    {
+        int cmd_status;
+        waitpid(cmd_pid, &cmd_status, 0);
+        return WEXITSTATUS(cmd_status);
+    }
+}
+
 static void child_proc(Job *job_p, int pipe)
 {
     bool pipe_closed = false;
@@ -89,13 +113,16 @@ static void child_proc(Job *job_p, int pipe)
     
     if (on_fork_hook != NULL) { on_fork_hook(); }
 
+    int cmd_validity = check_cmd(job_p, pipe);
+    write_exit_status_to_parent(cmd_validity, pipe);
+    pipe_closed = true;
+    
     do 
     {
         exit_status = start_job_cmd(job_p);
         
         if (!pipe_closed)
         {
-            write_exit_status_to_parent(exit_status, pipe);
             pipe_closed = true;
         }
         
@@ -133,6 +160,10 @@ static int parent_proc(Job *job_p, int pipe)
         
         switch (buffer)
         {
+            case 1:
+            case 2:
+                return SCHEDR_ERROR_INVALID_SYNTAX;
+            
             case SHELL_ERROR_CMD_NOT_FOUND:
                 return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND;
             

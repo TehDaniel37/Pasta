@@ -3,6 +3,7 @@
 #include <unistd.h>         // fork(), execve(), sleep()
 #include <sys/wait.h>       // waitpid()
 #include <stdbool.h>        // false
+#include <stdio.h>
 
 #include "schedr_scheduler.h"
 
@@ -42,65 +43,71 @@ static void cmd_proc(Job *job_p)
     _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
 }
 
-static void child_proc(Job *job_p, int pipe)
+static int start_job_cmd(Job *job_p)
 {
     pid_t cmd_pid;
-    int exit_status = 0;
-    bool pipe_closed = false;
+    
+    if ((cmd_pid = forker()) < 0) 
+    {
+        /*
+         * For some reason the following line is not reported as executed by GCOV
+         * the when running the tests, even though a printf statement verifies 
+         * (on 2017-11-20) that it is. Probably has something to do with the use of
+         * fork() as GCOV also has trouble with the use _Exit/_exit when terminating
+         * a child process.  
+         */
+         
+        return SCHEDR_ERROR_FORK_FAILED;    // GCOVR_EXCL_LINE
+    }
+    else if (cmd_pid == 0)
+    {
+        cmd_proc(job_p);    // will not return
+        
+        return SCHEDR_FAILURE;  // GCOVR_EXCL_LINE  (return statement added to silence compiler)
+    }
+    else 
+    {
+        int cmd_status;
+        waitpid(cmd_pid, &cmd_status, 0);
+        return WEXITSTATUS(cmd_status);
+    }
+}
 
+static void write_exit_status_to_parent(int status, int pipe)
+{
+    write(pipe, &status, sizeof(status));
+    close(pipe);
+}
+
+static void child_proc(Job *job_p, int pipe)
+{
+    bool pipe_closed = false;
+    int exit_status;
+    
     if (on_fork_hook != NULL) { on_fork_hook(); }
 
-    while (exit_status == 0)
+    do 
     {
-        if ((cmd_pid = forker()) < 0) 
+        exit_status = start_job_cmd(job_p);
+        
+        if (!pipe_closed)
         {
-            exit_status = SCHEDR_ERROR_FORK_FAILED;
-            
-            if (!pipe_closed)
-            {
-                write(pipe, &exit_status, sizeof(exit_status));
-                close(pipe);
-            }
-            
-            #ifdef TEST
-            __gcov_flush();
-            #endif
-            
-            _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+            write_exit_status_to_parent(exit_status, pipe);
+            pipe_closed = true;
         }
-        else if (cmd_pid == 0)
+        
+        if (exit_status == EXIT_SUCCESS) 
         {
-            close(pipe);
-
-            cmd_proc(job_p);
+            sleep(job_p->interval_seconds);
         }
-        else 
-        {
-            int cmd_status;
-            
-            waitpid(cmd_pid, &cmd_status, 0);
-            exit_status = WEXITSTATUS(cmd_status);
-            
-            if (!pipe_closed)
-            {
-                write(pipe, &exit_status, sizeof(exit_status));
-                close(pipe);
-            }
-            
-            if (exit_status != 0)
-            {
-                #ifdef TEST
-                __gcov_flush();
-                #endif
-            
-                _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
-            }
-            else
-            {
-                sleep(job_p->interval_seconds);
-            }
-        }
-    }
+        
+    } while (exit_status == EXIT_SUCCESS);
+    
+    #ifdef TEST
+    __gcov_flush();
+    #endif
+    
+    _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
 }
 
 static int parent_proc(Job *job_p, int pipe)

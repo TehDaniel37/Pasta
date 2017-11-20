@@ -1,5 +1,11 @@
 
 badge_name="coverage"
+
+for i in $(seq 1 10)
+do
+    make test 2>&1 >/dev/null
+done
+
 coverage=$(make cov | grep TOTAL | awk {'print $4'} | cut -d '%' -f 1)
 color="lightgrey"
 

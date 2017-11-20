@@ -12,6 +12,7 @@
 static bool *mock_exec_called;
 static bool *mock_exec_correct_params;
 static int *times_exec_called;
+static bool *mock_sleep_correct_params;
 
 #define mock_exec_expected_params "echo should call exec"
 
@@ -51,6 +52,12 @@ static int mock_exec_will_count_times_called(const char *file_name, char *const 
 }
 
 static pid_t mock_fork_will_fail(void) { return -1; }
+
+static int mock_sleep(int seconds) 
+{ 
+    *mock_sleep_correct_params = true; 
+    return 0;
+}
 
 static void setup() 
 {
@@ -169,6 +176,24 @@ static void start_job_should_call_exec_repeatedly()
     ssct_assert_true(*times_exec_called >= 10);
 
     munmap(times_exec_called, sizeof (int));
+}
+
+static void start_job_should_pass_correct_argument_to_sleep()
+{
+    const int expected_time = 1;
+    
+    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = expected_time, .state = Stopped };
+    
+    mock_sleep_correct_params = (bool *)create_shared_memory(sizeof (bool));
+    
+    schedr_scheduler_set_sleeper(mock_sleep);
+    schedr_scheduler_start_job(&job);
+    
+    ssct_assert_true(mock_sleep_correct_params);
+    
+    schedr_scheduler_reset_sleeper();
+    
+    munmap(mock_sleep_correct_params, sizeof (bool));
 }
 
 int main(void)

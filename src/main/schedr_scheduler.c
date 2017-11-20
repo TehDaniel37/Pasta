@@ -10,6 +10,8 @@
 
 extern char *environ[];
 
+static void (*on_fork_hook)(void) = NULL;
+
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
 
@@ -18,6 +20,8 @@ void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv
 void schedr_scheduler_reset_exec() { exec = execve; }
 void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
+void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void)) { on_fork_hook = on_fork; }
+void schedr_scheduler_remove_on_fork_hook() { on_fork_hook = NULL; }
 void __gcov_flush();
 #endif
 
@@ -48,9 +52,11 @@ Status schedr_scheduler_start_job(Job *job_p)
         pid_t cmd_pid;
         int exit_status;
 
+        if (on_fork_hook != NULL) { on_fork_hook(); }
+
         if ((cmd_pid = forker()) < 0) 
         {
-            exit_status = EXIT_FAILURE;
+            exit_status = SCHEDR_ERROR_FORK_FAILED;
             write(file_desc_child, &exit_status, sizeof(exit_status));
             close(file_desc_child);
             
@@ -95,8 +101,8 @@ Status schedr_scheduler_start_job(Job *job_p)
     {
         int buffer;
 
+        if (on_fork_hook != NULL) { on_fork_hook(); }
         close(file_desc_child);     // Close child end of pipe since parent doesn't need it
-
         read(file_desc_parent, &buffer, sizeof(buffer));
 
         if (buffer == 0) 
@@ -109,8 +115,9 @@ Status schedr_scheduler_start_job(Job *job_p)
         else 
         {
             close(file_desc_parent);
-
+            
             if (buffer == SHELL_ERROR_CMD_NOT_FOUND ) { return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND; }
+            else if (buffer == SCHEDR_ERROR_FORK_FAILED) { return buffer; }
             else { return SCHEDR_FAILURE; }
         }
     }

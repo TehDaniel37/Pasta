@@ -125,7 +125,7 @@ static void start_job_should_return_fork_failed_error_when_child_fork_fails()
 {   
     Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
     
-    schedr_scheduler_set_on_fork(on_fork);
+    schedr_scheduler_set_on_fork_hook(on_fork);
     Status status = schedr_scheduler_start_job(&job);
     
     ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
@@ -141,6 +141,7 @@ int main(void)
     ssct_run(start_job_should_set_job_state_to_running);
     ssct_run(start_job_should_return_command_not_found_error);
     ssct_run(start_job_should_return_fork_failed_error);
+    ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
 
     ssct_print_summary();
 

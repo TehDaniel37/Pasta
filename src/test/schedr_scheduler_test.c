@@ -14,7 +14,7 @@ static bool *mock_exec_correct_params;
 static int *times_exec_called;
 static bool *mock_sleep_correct_params;
 
-#define mock_exec_expected_params "echo should call exec"
+#define mock_exec_expected_params "echo 'should call exec'"
 #define mock_sleep_expected_param 3600
 
 /*
@@ -75,25 +75,44 @@ static void teardown()
     schedr_scheduler_reset_forker();
     schedr_scheduler_remove_on_fork_hook();
     schedr_scheduler_reset_sleeper();
+    schedr_scheduler_remove_on_command_checked_hook();
     kill(schedr_scheduler_get_child_pid(), SIGTERM);
 }
 
+static void on_command_checked() { schedr_scheduler_set_exec(mock_exec); }
+
 static void start_job_should_call_exec_with_correct_params()
 {
+    const int MICROSECS_PER_MILLISEC = 1000;
+    const int WAIT_MILLISEC = 10;
+    const int MAX_WAIT_MILLIS = 5000;
+    int time_waited_millis = 0;
+    
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
     *mock_exec_called = false;
     *mock_exec_correct_params = false; 
     
-    schedr_scheduler_set_exec(mock_exec);
+    schedr_scheduler_set_on_command_checked_hook(on_command_checked);
 
     Job job = { .name = "Test", .command = mock_exec_expected_params, .interval_seconds = 0, .state = Stopped };
 
     schedr_scheduler_start_job(&job);
+    
+    while (!(*mock_exec_called || *mock_exec_correct_params))
+    {
+        time_waited_millis += WAIT_MILLISEC;
+        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
+        
+        if (time_waited_millis > MAX_WAIT_MILLIS)
+        {
+            break;
+        }
+    }
 
     ssct_assert_true(*mock_exec_called);
     ssct_assert_true(*mock_exec_correct_params);
-
+    
     munmap(mock_exec_called, sizeof (bool));
     munmap(mock_exec_correct_params, sizeof(bool));
 }
@@ -121,7 +140,7 @@ static void start_job_should_set_job_state_to_running()
 
 static void start_job_should_return_command_not_found_error() 
 {
-    Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
+    Job job = { .name = "Test", .command = "ehco", .interval_seconds = 1, .state = Stopped };
 
     Status status = schedr_scheduler_start_job(&job);
 
@@ -130,7 +149,7 @@ static void start_job_should_return_command_not_found_error()
 
 static void start_job_should_return_fork_failed_error()
 {
-    Job job = { .name = "Test", .command = "ehco &>/dev/null", .interval_seconds = 1, .state = Stopped };
+    Job job = { .name = "Test", .command = "ehco", .interval_seconds = 1, .state = Stopped };
 
     schedr_scheduler_set_forker(mock_fork_will_fail);
     Status status = schedr_scheduler_start_job(&job);
@@ -157,10 +176,10 @@ static void start_job_should_call_exec_repeatedly()
 {
     const int MICROSECS_PER_MILLISEC = 1000;
     const int WAIT_MILLISEC = 10;
-    const int MAX_WAIT_MILLIS = 1000;
+    const int MAX_WAIT_MILLIS = 5000;
     int time_waited_millis = 0;
     
-    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = 0, .state = Stopped };
+    Job job = { .name = "Test", .command = "echo", .interval_seconds = 0, .state = Stopped };
     times_exec_called = (int *)create_shared_memory(sizeof (int));
     *times_exec_called = 0;
     
@@ -186,7 +205,7 @@ static void start_job_should_call_exec_repeatedly()
 
 static void start_job_should_pass_3600_seconds_to_sleep()
 {
-    Job job = { .name = "Test", .command = "dfoko", .interval_seconds = mock_sleep_expected_param, .state = Stopped };
+    Job job = { .name = "Test", .command = "echo", .interval_seconds = mock_sleep_expected_param, .state = Stopped };
     
     mock_sleep_correct_params = (bool *)create_shared_memory(sizeof (bool));
     
@@ -201,7 +220,7 @@ static void start_job_should_pass_3600_seconds_to_sleep()
 
 static void start_job_should_return_invalid_syntax_error() 
 {
-    Job job = { .name = "Test", .command = "while true do echo hello done &>/dev/null", .interval_seconds = 0, .state = Stopped };
+    Job job = { .name = "Test", .command = "while true do echo hello done", .interval_seconds = 0, .state = Stopped };
     
     Status status = schedr_scheduler_start_job(&job);
     

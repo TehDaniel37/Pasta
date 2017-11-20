@@ -3,7 +3,7 @@
 #include <unistd.h>         // fork(), execve(), sleep()
 #include <sys/wait.h>       // waitpid()
 #include <stdbool.h>        // false
-#include <stdio.h>
+#include <string.h>
 
 #include "schedr_scheduler.h"
 
@@ -12,6 +12,7 @@
 extern char *environ[];
 
 static void (*on_fork_hook)(void) = NULL;
+static void (*on_command_checked_hook)(void) = NULL;
 
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
@@ -28,6 +29,8 @@ void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int second
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
 void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void)) { on_fork_hook = on_fork; }
 void schedr_scheduler_remove_on_fork_hook() { on_fork_hook = NULL; }
+void schedr_scheduler_set_on_command_checked_hook(void (*on_cmd_checked)(void)) { on_command_checked_hook = on_cmd_checked; }
+void schedr_scheduler_remove_on_command_checked_hook() { on_command_checked_hook = NULL; }
 pid_t schedr_scheduler_get_child_pid() { return temp_job_pid; }
 void __gcov_flush();
 #endif
@@ -82,11 +85,13 @@ static void write_exit_status_to_parent(int status, int pipe)
     close(pipe);
 }
 
-static int check_cmd(Job *job_p, int pipe)
+static Status check_command_syntax(Job *job_p)
 {
     pid_t cmd_pid;
+    int exit_status;
     
-    if ((cmd_pid = forker()) == 0) 
+    if ((cmd_pid = forker()) < 0) { exit_status = SCHEDR_ERROR_FORK_FAILED; }
+    else if (cmd_pid == 0) 
     {
         char *shell = getenv("SHELL");
         char *argv[] = { shell, "-n", "-c", job_p->command, NULL };
@@ -100,38 +105,90 @@ static int check_cmd(Job *job_p, int pipe)
     }
     else
     {
-        int cmd_status;
-        waitpid(cmd_pid, &cmd_status, 0);
-        return WEXITSTATUS(cmd_status);
+        int status;
+        waitpid(cmd_pid, &status, 0);
+        exit_status = WEXITSTATUS(status);
     }
+    
+    if (exit_status == 1) { return SCHEDR_ERROR_INVALID_SYNTAX; }
+    else { return exit_status; }
+}
+
+static Status check_command_exists(Job *job_p)
+{
+    pid_t cmd_pid;
+    int exit_status;
+    
+    if ((cmd_pid = forker()) < 0) { exit_status = SCHEDR_ERROR_FORK_FAILED; }
+    else if (cmd_pid == 0)
+    {
+        char *shell = getenv("SHELL");
+        const char *shell_arg_prefix = "command -v ";
+        int size = strlen(shell_arg_prefix) + strlen(job_p->command);
+        char *shell_arg = (char *)malloc(size + 1);
+        strcpy(shell_arg, shell_arg_prefix);
+        shell_arg[strlen(shell_arg_prefix)] = '\0';
+        strcat(shell_arg, job_p->command);
+        shell_arg[size] = '\0';
+        char *argv[] = { shell, "-c", shell_arg, NULL };
+        exec(argv[0], argv, environ);
+        #ifdef TEST
+        __gcov_flush();
+        #endif
+        
+        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+    }
+    else
+    {
+        int status;
+        
+        waitpid(cmd_pid, &status, 0);
+        exit_status = WEXITSTATUS(status);
+    }
+    
+    if (exit_status == 1) { return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND; }
+    else { return exit_status; }
 }
 
 static void child_proc(Job *job_p, int pipe)
 {
-    bool pipe_closed = false;
-    int exit_status;
-    
+    int cmd_status;
     if (on_fork_hook != NULL) { on_fork_hook(); }
 
-    int cmd_validity = check_cmd(job_p, pipe);
-    write_exit_status_to_parent(cmd_validity, pipe);
-    pipe_closed = true;
-    
-    do 
+    if ((cmd_status = check_command_syntax(job_p)) == SCHEDR_SUCCESS) 
     {
-        exit_status = start_job_cmd(job_p);
+        char *cmd = job_p->command;
+        bool one_word = true;
         
-        if (!pipe_closed)
+        for (int i = 0; cmd[i]; i++) 
         {
-            pipe_closed = true;
+            if (cmd[i] == ' ') 
+            { 
+                one_word = false;
+                break;
+            }
         }
         
-        if (exit_status == EXIT_SUCCESS) 
+        if (one_word)
+        {
+            cmd_status = check_command_exists(job_p);
+        }
+    }
+    
+    write_exit_status_to_parent(cmd_status, pipe);
+    close(pipe);
+    
+    if (on_command_checked_hook != NULL) { on_command_checked_hook(); }
+    
+    while (cmd_status == EXIT_SUCCESS)
+    {
+        cmd_status = start_job_cmd(job_p);
+        
+        if (cmd_status == EXIT_SUCCESS) 
         {
             sleeper(job_p->interval_seconds);
         }
-        
-    } while (exit_status == EXIT_SUCCESS);
+    }
     
     #ifdef TEST
     __gcov_flush();
@@ -147,7 +204,7 @@ static int parent_proc(Job *job_p, int pipe)
     if (on_fork_hook != NULL) { on_fork_hook(); }
     read(pipe, &buffer, sizeof(buffer));
 
-    if (buffer == 0) 
+    if (buffer == 0)
     {
         job_p->state = Running;
         close(pipe);
@@ -160,14 +217,12 @@ static int parent_proc(Job *job_p, int pipe)
         
         switch (buffer)
         {
-            case 1:
-            case 2:
-                return SCHEDR_ERROR_INVALID_SYNTAX;
-            
             case SHELL_ERROR_CMD_NOT_FOUND:
                 return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND;
             
             case SCHEDR_ERROR_FORK_FAILED:
+            case SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND:
+            case SCHEDR_ERROR_INVALID_SYNTAX:
                 return buffer;
                 
             default:

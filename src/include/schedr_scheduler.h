@@ -10,12 +10,15 @@
 #include <schedr_status_codes.h>
 
 #ifdef TEST
+#include <sys/types.h>
+
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[]));
 void schedr_scheduler_reset_exec();
 void schedr_scheduler_set_forker(int (*fork_func)(void));
 void schedr_scheduler_reset_forker();
 void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void));
 void schedr_scheduler_remove_on_fork_hook();
+pid_t schedr_scheduler_get_child_pid();
 #endif
 
 /*

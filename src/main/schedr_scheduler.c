@@ -15,6 +15,8 @@ static void (*on_fork_hook)(void) = NULL;
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
 
+static pid_t temp_job_pid;
+
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[])) { exec = exec_func; }
 void schedr_scheduler_reset_exec() { exec = execve; }
@@ -22,6 +24,7 @@ void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void)) { on_fork_hook = on_fork; }
 void schedr_scheduler_remove_on_fork_hook() { on_fork_hook = NULL; }
+pid_t schedr_scheduler_get_child_pid() { return temp_job_pid; }
 void __gcov_flush();
 #endif
 
@@ -42,42 +45,61 @@ static void cmd_proc(Job *job_p)
 static void child_proc(Job *job_p, int pipe)
 {
     pid_t cmd_pid;
-    int exit_status;
+    int exit_status = 0;
+    bool pipe_closed = false;
 
     if (on_fork_hook != NULL) { on_fork_hook(); }
 
-    if ((cmd_pid = forker()) < 0) 
+    while (exit_status == 0)
     {
-        exit_status = SCHEDR_ERROR_FORK_FAILED;
-        write(pipe, &exit_status, sizeof(exit_status));
-        close(pipe);
-        
-        #ifdef TEST
-        __gcov_flush();
-        #endif
-        
-        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
-    }
-    else if (cmd_pid == 0)
-    {
-        close(pipe);
+        if ((cmd_pid = forker()) < 0) 
+        {
+            exit_status = SCHEDR_ERROR_FORK_FAILED;
+            
+            if (!pipe_closed)
+            {
+                write(pipe, &exit_status, sizeof(exit_status));
+                close(pipe);
+            }
+            
+            #ifdef TEST
+            __gcov_flush();
+            #endif
+            
+            _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+        }
+        else if (cmd_pid == 0)
+        {
+            close(pipe);
 
-        cmd_proc(job_p);
-    }
-    else 
-    {
-        int cmd_status;
-
-        waitpid(cmd_pid, &cmd_status, 0);
-        exit_status = WEXITSTATUS(cmd_status);
-        write(pipe, &exit_status, sizeof(exit_status));
-        close(pipe);
-        
-        #ifdef TEST
-        __gcov_flush();
-        #endif
-        
-        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+            cmd_proc(job_p);
+        }
+        else 
+        {
+            int cmd_status;
+            
+            waitpid(cmd_pid, &cmd_status, 0);
+            exit_status = WEXITSTATUS(cmd_status);
+            
+            if (!pipe_closed)
+            {
+                write(pipe, &exit_status, sizeof(exit_status));
+                close(pipe);
+            }
+            
+            if (exit_status != 0)
+            {
+                #ifdef TEST
+                __gcov_flush();
+                #endif
+            
+                _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+            }
+            else
+            {
+                sleep(job_p->interval_seconds);
+            }
+        }
     }
 }
 
@@ -140,6 +162,7 @@ Status schedr_scheduler_start_job(Job *job_p)
     }
     else
     {
+        temp_job_pid = job_pid;
         close(file_desc_child);     // Close child end of pipe since parent doesn't need it
         return parent_proc(job_p, file_desc_parent);
     }

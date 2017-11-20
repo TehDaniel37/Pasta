@@ -62,6 +62,7 @@ static void teardown()
     schedr_scheduler_reset_exec();
     schedr_scheduler_reset_forker();
     schedr_scheduler_remove_on_fork_hook();
+    kill(schedr_scheduler_get_child_pid(), SIGTERM);
 }
 
 static void start_job_should_call_exec_with_correct_params()
@@ -143,6 +144,8 @@ static void start_job_should_call_exec_repeatedly()
 {
     const int MICROSECS_PER_MILLISEC = 1000;
     const int WAIT_MILLISEC = 10;
+    const int MAX_WAIT_MILLIS = 1000;
+    int time_waited_millis = 0;
     
     Job job = { .name = "Test", .command = "dfoko", .interval_seconds = 0, .state = Stopped };
     times_exec_called = (int *)create_shared_memory(sizeof (int));
@@ -154,13 +157,17 @@ static void start_job_should_call_exec_repeatedly()
     
     while (*times_exec_called < 10) 
     {
+        time_waited_millis += WAIT_MILLISEC;
         usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
+        
+        if (time_waited_millis > MAX_WAIT_MILLIS)
+        {
+            break;
+        }
     }
-    
+
     ssct_assert_true(*times_exec_called >= 10);
 
-    pid_t child_pid = schedr_scheduler_get_child_pid();
-    kill(child_pid, SIGTERM);
     munmap(times_exec_called, sizeof (int));
 }
 

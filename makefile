@@ -79,9 +79,14 @@ build: create_dirs $(objects)
 $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
 
-# Calculate code coverage
+# Calculate code coverage. Runs tests 10 times to ensure correct coverage data
 .PHONY: cov
 cov: test
+	for i in `seq 1 10` ; do \
+		for target in $(test_targets) ; do \
+			./$$target ; \
+		done \
+	done
 	gcovr -r $(test_deps_dir)
 
 # Run test cases

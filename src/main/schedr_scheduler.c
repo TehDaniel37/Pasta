@@ -34,7 +34,13 @@ Status schedr_scheduler_start_job(Job *job_p)
     file_desc_parent = pipe_file_descs[0];
     file_desc_child = pipe_file_descs[1];
 
-    if ((job_pid = fork()) < 0) { return SCHEDR_FAILURE; }
+    if ((job_pid = forker()) < 0) 
+    {
+        close(file_desc_parent);
+        close(file_desc_child);
+         
+        return SCHEDR_ERROR_FORK_FAILED;
+    }
     else if (job_pid == 0)          // executed by child
     {
         close(file_desc_parent);    // Close parent end of pipe since child doesn't need it
@@ -42,7 +48,7 @@ Status schedr_scheduler_start_job(Job *job_p)
         pid_t cmd_pid;
         int exit_status;
 
-        if ((cmd_pid = fork()) < 0) 
+        if ((cmd_pid = forker()) < 0) 
         {
             exit_status = EXIT_FAILURE;
             write(file_desc_child, &exit_status, sizeof(exit_status));

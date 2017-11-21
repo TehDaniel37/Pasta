@@ -24,6 +24,6 @@ else
     color="lightgreen"
 fi
 
-url=https://img.shields.io/badge/${badge_name}-${coverage}%25-${color}.svg
+url=https://img.shields.io/badge/${badge_name}-${coverage}%25-${color}.svg\?style=for-the-badge
 
 wget -q -O doc/coverage.svg $url

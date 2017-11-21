@@ -7,12 +7,7 @@
 
 #include "schedr_scheduler.h"
 
-#define SHELL_ERROR_CMD_NOT_FOUND 127
-
 extern char *environ[];
-
-static void (*on_fork_hook)(void) = NULL;
-static void (*on_command_checked_hook)(void) = NULL;
 
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
@@ -27,10 +22,6 @@ void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
-void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void)) { on_fork_hook = on_fork; }
-void schedr_scheduler_remove_on_fork_hook() { on_fork_hook = NULL; }
-void schedr_scheduler_set_on_command_checked_hook(void (*on_cmd_checked)(void)) { on_command_checked_hook = on_cmd_checked; }
-void schedr_scheduler_remove_on_command_checked_hook() { on_command_checked_hook = NULL; }
 pid_t schedr_scheduler_get_child_pid() { return temp_job_pid; }
 void __gcov_flush();
 #endif
@@ -57,7 +48,7 @@ static int start_job_cmd(Job *job_p)
     {
         /*
          * For some reason the following line is not reported as executed by GCOV
-         * the when running the tests, even though a printf statement verifies 
+         * when running the tests, even though a printf statement verifies 
          * (on 2017-11-20) that it is. Probably has something to do with the use of
          * fork() as GCOV also has trouble with the use _Exit/_exit when terminating
          * a child process.  
@@ -79,106 +70,9 @@ static int start_job_cmd(Job *job_p)
     }
 }
 
-static void write_exit_status_to_parent(int status, int pipe)
+static void child_proc(Job *job_p)
 {
-    write(pipe, &status, sizeof(status));
-    close(pipe);
-}
-
-static Status check_command_syntax(Job *job_p)
-{
-    pid_t cmd_pid;
-    int exit_status;
-    
-    if ((cmd_pid = forker()) < 0) { exit_status = SCHEDR_ERROR_FORK_FAILED; }
-    else if (cmd_pid == 0) 
-    {
-        char *shell = getenv("SHELL");
-        char *argv[] = { shell, "-n", "-c", job_p->command, NULL };
-        exec(argv[0], argv, environ);
-        
-        #ifdef TEST
-        __gcov_flush();
-        #endif
-        
-        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
-    }
-    else
-    {
-        int status;
-        waitpid(cmd_pid, &status, 0);
-        exit_status = WEXITSTATUS(status);
-    }
-    
-    if (exit_status == 1) { return SCHEDR_ERROR_INVALID_SYNTAX; }
-    else { return exit_status; }
-}
-
-static Status check_command_exists(Job *job_p)
-{
-    pid_t cmd_pid;
-    int exit_status;
-    
-    if ((cmd_pid = forker()) < 0) { exit_status = SCHEDR_ERROR_FORK_FAILED; }
-    else if (cmd_pid == 0)
-    {
-        char *shell = getenv("SHELL");
-        const char *shell_arg_prefix = "command -v ";
-        int size = strlen(shell_arg_prefix) + strlen(job_p->command);
-        char *shell_arg = (char *)malloc(size + 1);
-        strcpy(shell_arg, shell_arg_prefix);
-        shell_arg[strlen(shell_arg_prefix)] = '\0';
-        strcat(shell_arg, job_p->command);
-        shell_arg[size] = '\0';
-        char *argv[] = { shell, "-c", shell_arg, NULL };
-        exec(argv[0], argv, environ);
-        #ifdef TEST
-        __gcov_flush();
-        #endif
-        
-        _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
-    }
-    else
-    {
-        int status;
-        
-        waitpid(cmd_pid, &status, 0);
-        exit_status = WEXITSTATUS(status);
-    }
-    
-    if (exit_status == 1) { return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND; }
-    else { return exit_status; }
-}
-
-static void child_proc(Job *job_p, int pipe)
-{
-    int cmd_status;
-    if (on_fork_hook != NULL) { on_fork_hook(); }
-
-    if ((cmd_status = check_command_syntax(job_p)) == SCHEDR_SUCCESS) 
-    {
-        char *cmd = job_p->command;
-        bool one_word = true;
-        
-        for (int i = 0; cmd[i]; i++) 
-        {
-            if (cmd[i] == ' ') 
-            { 
-                one_word = false;
-                break;
-            }
-        }
-        
-        if (one_word)
-        {
-            cmd_status = check_command_exists(job_p);
-        }
-    }
-    
-    write_exit_status_to_parent(cmd_status, pipe);
-    close(pipe);
-    
-    if (on_command_checked_hook != NULL) { on_command_checked_hook(); }
+    int cmd_status = EXIT_SUCCESS;
     
     while (cmd_status == EXIT_SUCCESS)
     {
@@ -197,71 +91,19 @@ static void child_proc(Job *job_p, int pipe)
     _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
 }
 
-static int parent_proc(Job *job_p, int pipe)
+static Status parent_proc(Job *job_p)
 {
-    int buffer;
-
-    if (on_fork_hook != NULL) { on_fork_hook(); }
-    read(pipe, &buffer, sizeof(buffer));
-
-    if (buffer == 0)
-    {
-        job_p->state = Running;
-        close(pipe);
-
-        return SCHEDR_SUCCESS;
-    }
-    else 
-    {
-        close(pipe);
-        
-        switch (buffer)
-        {
-            case SHELL_ERROR_CMD_NOT_FOUND:
-                return SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND;
-            
-            case SCHEDR_ERROR_FORK_FAILED:
-            case SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND:
-            case SCHEDR_ERROR_INVALID_SYNTAX:
-                return buffer;
-                
-            default:
-                return SCHEDR_FAILURE;
-        }
-    }
+    job_p->state = Running;
+    return SCHEDR_SUCCESS;
 }
 
 Status schedr_scheduler_start_job(Job *job_p)
 {
-    int pipe_return;
-    int pipe_file_descs[2];
-    int file_desc_parent;
-    int file_desc_child;
     pid_t job_pid;
-    
-    if ((pipe_return = pipe(pipe_file_descs)) < 0) { return SCHEDR_FAILURE; }
 
-    file_desc_parent = pipe_file_descs[0];
-    file_desc_child = pipe_file_descs[1];
-
-    if ((job_pid = forker()) < 0) 
-    {
-        close(file_desc_parent);
-        close(file_desc_child);
-         
-        return SCHEDR_ERROR_FORK_FAILED;
-    }
-    else if (job_pid == 0)          // executed by child
-    {
-        close(file_desc_parent);    // Close parent end of pipe since child doesn't need it
-        child_proc(job_p, file_desc_child);
-    }
-    else
-    {
-        temp_job_pid = job_pid;
-        close(file_desc_child);     // Close child end of pipe since parent doesn't need it
-        return parent_proc(job_p, file_desc_parent);
-    }
+    if ((job_pid = forker()) < 0)  { return SCHEDR_ERROR_FORK_FAILED; }
+    else if (job_pid == 0) { child_proc(job_p); }
+    else { temp_job_pid = job_pid; return parent_proc(job_p); }
     
     return SCHEDR_FAILURE; // GCOVR_EXCL_LINE (will never be executed)
 }

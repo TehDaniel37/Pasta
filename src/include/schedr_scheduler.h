@@ -18,10 +18,6 @@ void schedr_scheduler_set_forker(int (*fork_func)(void));
 void schedr_scheduler_reset_forker();
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds));
 void schedr_scheduler_reset_sleeper();
-void schedr_scheduler_set_on_fork_hook(void (*on_fork)(void));
-void schedr_scheduler_remove_on_fork_hook();
-void schedr_scheduler_set_on_command_checked_hook(void (*on_cmd_checked)(void));
-void schedr_scheduler_remove_on_command_checked_hook();
 pid_t schedr_scheduler_get_child_pid();
 #endif
 

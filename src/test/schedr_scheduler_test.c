@@ -73,29 +73,24 @@ static void teardown()
 {
     schedr_scheduler_reset_exec();
     schedr_scheduler_reset_forker();
-    schedr_scheduler_remove_on_fork_hook();
     schedr_scheduler_reset_sleeper();
-    schedr_scheduler_remove_on_command_checked_hook();
     kill(schedr_scheduler_get_child_pid(), SIGTERM);
 }
-
-static void on_command_checked() { schedr_scheduler_set_exec(mock_exec); }
 
 static void start_job_should_call_exec_with_correct_params()
 {
     const int MICROSECS_PER_MILLISEC = 1000;
     const int WAIT_MILLISEC = 10;
-    const int MAX_WAIT_MILLIS = 5000;
+    const int TIMEOUT_MILLIS = 5000;
     int time_waited_millis = 0;
     
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
     *mock_exec_called = false;
     *mock_exec_correct_params = false; 
-    
-    schedr_scheduler_set_on_command_checked_hook(on_command_checked);
 
     Job job = { .name = "Test", .command = mock_exec_expected_params, .interval_seconds = 0, .state = Stopped };
+    schedr_scheduler_set_exec(mock_exec);
 
     schedr_scheduler_start_job(&job);
     
@@ -104,7 +99,7 @@ static void start_job_should_call_exec_with_correct_params()
         time_waited_millis += WAIT_MILLISEC;
         usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
         
-        if (time_waited_millis > MAX_WAIT_MILLIS)
+        if (time_waited_millis > TIMEOUT_MILLIS)
         {
             break;
         }
@@ -138,15 +133,6 @@ static void start_job_should_set_job_state_to_running()
     ssct_assert_equals(job.state, Running);
 }
 
-static void start_job_should_return_command_not_found_error() 
-{
-    Job job = { .name = "Test", .command = "ehco", .interval_seconds = 1, .state = Stopped };
-
-    Status status = schedr_scheduler_start_job(&job);
-
-    ssct_assert_equals(status, SCHEDR_ERROR_JOB_COMMAND_NOT_FOUND);
-}
-
 static void start_job_should_return_fork_failed_error()
 {
     Job job = { .name = "Test", .command = "ehco", .interval_seconds = 1, .state = Stopped };
@@ -157,26 +143,11 @@ static void start_job_should_return_fork_failed_error()
     ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
 }
 
-static void on_fork(void)
-{
-    schedr_scheduler_set_forker(mock_fork_will_fail);
-}
-
-static void start_job_should_return_fork_failed_error_when_child_fork_fails()
-{   
-    Job job = { .name = "Test", .command = "echo", .interval_seconds = 1, .state = Stopped };
-    
-    schedr_scheduler_set_on_fork_hook(on_fork);
-    Status status = schedr_scheduler_start_job(&job);
-    
-    ssct_assert_equals(status, SCHEDR_ERROR_FORK_FAILED);
-}
-
 static void start_job_should_call_exec_repeatedly()
 {
     const int MICROSECS_PER_MILLISEC = 1000;
     const int WAIT_MILLISEC = 10;
-    const int MAX_WAIT_MILLIS = 5000;
+    const int TIMEOUT_MILLIS = 5000;
     int time_waited_millis = 0;
     
     Job job = { .name = "Test", .command = "echo", .interval_seconds = 0, .state = Stopped };
@@ -192,7 +163,7 @@ static void start_job_should_call_exec_repeatedly()
         time_waited_millis += WAIT_MILLISEC;
         usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
         
-        if (time_waited_millis > MAX_WAIT_MILLIS)
+        if (time_waited_millis > TIMEOUT_MILLIS)
         {
             break;
         }
@@ -218,15 +189,6 @@ static void start_job_should_pass_3600_seconds_to_sleep()
     munmap(mock_sleep_correct_params, sizeof (bool));
 }
 
-static void start_job_should_return_invalid_syntax_error() 
-{
-    Job job = { .name = "Test", .command = "while true do echo hello done", .interval_seconds = 0, .state = Stopped };
-    
-    Status status = schedr_scheduler_start_job(&job);
-    
-    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_SYNTAX);
-}
-
 int main(void)
 {
     ssct_setup = setup;
@@ -235,12 +197,9 @@ int main(void)
     ssct_run(start_job_should_call_exec_with_correct_params);
     ssct_run(start_job_should_return_success_when_job_starts_successfully);
     ssct_run(start_job_should_set_job_state_to_running);
-    ssct_run(start_job_should_return_command_not_found_error);
     ssct_run(start_job_should_return_fork_failed_error);
-    ssct_run(start_job_should_return_fork_failed_error_when_child_fork_fails);
     ssct_run(start_job_should_call_exec_repeatedly);
     ssct_run(start_job_should_pass_3600_seconds_to_sleep);
-    ssct_run(start_job_should_return_invalid_syntax_error);
     
     ssct_print_summary();
 

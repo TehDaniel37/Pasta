@@ -1,3 +1,4 @@
+#!/bin/bash
 
 badge_name="coverage"
 

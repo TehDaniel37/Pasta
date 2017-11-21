@@ -18,7 +18,7 @@ void schedr_scheduler_set_forker(int (*fork_func)(void));
 void schedr_scheduler_reset_forker();
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds));
 void schedr_scheduler_reset_sleeper();
-pid_t schedr_scheduler_get_child_pid();
+void schedr_scheduler_kill_children();
 #endif
 
 /*

@@ -13,7 +13,7 @@ static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = exe
 static int (*forker)(void) = fork;
 static unsigned int (*sleeper)(unsigned int seconds) = sleep;
 
-static pid_t temp_job_pid;
+static pid_t temp_child_pid;
 
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[])) { exec = exec_func; }
@@ -22,7 +22,7 @@ void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
-pid_t schedr_scheduler_get_child_pid() { return temp_job_pid; }
+void schedr_scheduler_kill_children() { kill(temp_child_pid, SIGTERM); }
 void __gcov_flush();
 #endif
 
@@ -31,13 +31,13 @@ static void cmd_proc(Job *job_p)
     char *shell = getenv("SHELL");
     char *argv[] = { shell, "-c", job_p->command, NULL };
     
-    exec(argv[0], argv, environ);
-    
     #ifdef TEST
     __gcov_flush();
     #endif
     
-    _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+    exec(argv[0], argv, environ);   // GCOVR_EXCL_LINE
+    
+    _exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
 }
 
 static int start_job_cmd(Job *job_p)
@@ -88,12 +88,13 @@ static void child_proc(Job *job_p)
     __gcov_flush();
     #endif
     
-    _Exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
+    _exit(EXIT_FAILURE);    // GCOVR_EXCL_LINE
 }
 
 static Status parent_proc(Job *job_p)
 {
     job_p->state = Running;
+    
     return SCHEDR_SUCCESS;
 }
 
@@ -103,7 +104,12 @@ Status schedr_scheduler_start_job(Job *job_p)
 
     if ((job_pid = forker()) < 0)  { return SCHEDR_ERROR_FORK_FAILED; }
     else if (job_pid == 0) { child_proc(job_p); }
-    else { temp_job_pid = job_pid; return parent_proc(job_p); }
+    else 
+    {
+        temp_child_pid = job_pid;
+         
+        return parent_proc(job_p);
+    }
     
     return SCHEDR_FAILURE; // GCOVR_EXCL_LINE (will never be executed)
 }

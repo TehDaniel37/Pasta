@@ -9,13 +9,13 @@
 #include "schedr_status_codes.h"
 #include "schedr_scheduler.h"
 
+#define mock_exec_expected_params "echo 'should call exec'"
+#define mock_sleep_expected_param 3600
+
 static bool *mock_exec_called;
 static bool *mock_exec_correct_params;
 static int *times_exec_called;
 static bool *mock_sleep_correct_params;
-
-#define mock_exec_expected_params "echo 'should call exec'"
-#define mock_sleep_expected_param 3600
 
 /*
  * Credit: slezica
@@ -28,7 +28,7 @@ static void *create_shared_memory(size_t bytes)
     return mmap(NULL, bytes, protection, visibility, 0, 0);
 }
 
-static int mock_exec(const char *file_name, char *const argv[], char *const envp[])
+static int mock_exec_will_verify_params(const char *file_name, char *const argv[], char *const envp[])
 {
     *mock_exec_called = true;
 
@@ -37,19 +37,19 @@ static int mock_exec(const char *file_name, char *const argv[], char *const envp
         *mock_exec_correct_params = true;
     }
 
-    return 0;
+    _exit(EXIT_FAILURE);
 }
 
-static int mock_exec_will_exec_true(const char *file_name, char *const argv[], char *const envp[])
+static int mock_exec_will_exit_unsuccessfully(const char *file_name, char *const argv[], char *const envp[])
 {
-    return execlp("true", "true", NULL);
+    _exit(EXIT_FAILURE);
 }
 
 static int mock_exec_will_count_times_called(const char *file_name, char *const argv[], char *const envp[])
 {
     *times_exec_called += 1;
     
-    return execlp("true", "true", NULL);
+    _exit(EXIT_SUCCESS);
 }
 
 static pid_t mock_fork_will_fail(void) { return -1; }
@@ -66,15 +66,15 @@ static unsigned int mock_sleep(unsigned int seconds)
 
 static void setup() 
 {
-
+    schedr_scheduler_set_exec(mock_exec_will_exit_unsuccessfully);
 }
 
 static void teardown()
 {
+    schedr_scheduler_kill_children();
     schedr_scheduler_reset_exec();
     schedr_scheduler_reset_forker();
     schedr_scheduler_reset_sleeper();
-    kill(schedr_scheduler_get_child_pid(), SIGTERM);
 }
 
 static void start_job_should_call_exec_with_correct_params()
@@ -90,7 +90,7 @@ static void start_job_should_call_exec_with_correct_params()
     *mock_exec_correct_params = false; 
 
     Job job = { .name = "Test", .command = mock_exec_expected_params, .interval_seconds = 0, .state = Stopped };
-    schedr_scheduler_set_exec(mock_exec);
+    schedr_scheduler_set_exec(mock_exec_will_verify_params);
 
     schedr_scheduler_start_job(&job);
     
@@ -99,10 +99,7 @@ static void start_job_should_call_exec_with_correct_params()
         time_waited_millis += WAIT_MILLISEC;
         usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
         
-        if (time_waited_millis > TIMEOUT_MILLIS)
-        {
-            break;
-        }
+        if (time_waited_millis > TIMEOUT_MILLIS) { break; }
     }
 
     ssct_assert_true(*mock_exec_called);
@@ -116,8 +113,6 @@ static void start_job_should_return_success_when_job_starts_successfully()
 {
     Job job = { .name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped };
 
-    schedr_scheduler_set_exec(mock_exec_will_exec_true);
-
     Status status = schedr_scheduler_start_job(&job);
 
     ssct_assert_equals(status, SCHEDR_SUCCESS);
@@ -127,7 +122,6 @@ static void start_job_should_set_job_state_to_running()
 {
     Job job = { .name = "Test", .command = "echo hello", .interval_seconds = 0, .state = Stopped };
 
-    schedr_scheduler_set_exec(mock_exec_will_exec_true);
     schedr_scheduler_start_job(&job);
 
     ssct_assert_equals(job.state, Running);
@@ -180,7 +174,6 @@ static void start_job_should_pass_3600_seconds_to_sleep()
     
     mock_sleep_correct_params = (bool *)create_shared_memory(sizeof (bool));
     
-    schedr_scheduler_set_exec(mock_exec_will_exec_true);
     schedr_scheduler_set_sleeper(mock_sleep);
     schedr_scheduler_start_job(&job);
     

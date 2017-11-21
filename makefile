@@ -81,10 +81,11 @@ $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 
 # Calculate code coverage. Runs tests 10 times to ensure correct coverage data
 .PHONY: cov
-cov: test
+cov: CFLAGS=$(test_flags)
+cov: clean create_dirs $(ssct_h) $(test_targets)
 	for i in `seq 1 10` ; do \
 		for target in $(test_targets) ; do \
-			./$$target ; \
+			./$$target &>/dev/null ; \
 		done \
 	done
 	gcovr -r $(test_deps_dir)

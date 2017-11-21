@@ -15,7 +15,8 @@ static void *(*allocator)(size_t bytes) = malloc;
 
 static bool is_unit(const char *str);
 static bool is_digit(const char *str);
-static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *number_of_jobs);
+static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs);
+static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *jobs_count, int expected_jobs_len);
 
 #ifdef TEST
 void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
@@ -24,18 +25,11 @@ void schedr_config_reset_allocator() { allocator = malloc; }
 
 Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *filepath)
 {
-    static const char DEFAULT_DELIM[] = " \t\r\n\v\f";
-    static const char NAME_DELIM[] = "\"";
-    static const char CMD_DELIM[] = "`";
-
     if (*jobs != NULL)
     {
         return SCHEDR_ERROR_INVALID_ARGUMENT;
     }
 
-    // Read whole file
-    struct stat st;
-    stat(filepath, &st);
     FILE *file_p = fopen(filepath, "r");
 
     if (file_p == NULL)
@@ -46,181 +40,39 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
         return SCHEDR_FAILURE;
     }
 
-    char *file_contents = (char *)allocator(st.st_size + 1);
-    
-    if (file_contents == NULL)
-    {
-        fclose(file_p);
-        return SCHEDR_ERROR_ALLOCATION_FAILED;
-    }
-
-    size_t len = fread(file_contents, sizeof (char), st.st_size, file_p);
-    fclose(file_p);
-    file_contents[len] = '\0';
-
+    char *file_contents = NULL;
     size_t expected_jobs_len = 0;
-    Status status = find_number_of_jobs(file_contents, len, &expected_jobs_len);
+    
+    Status status = find_number_of_jobs(file_p, &file_contents, &expected_jobs_len);
 
-    if (status != SCHEDR_SUCCESS)
-    {
-        free(file_contents);
-        return status;
-    }
+    if (status != SCHEDR_SUCCESS) { return status; }
 
     int jobs_count = 0;
     Job *loaded_jobs = (Job *)allocator(sizeof (Job) * expected_jobs_len);
-    Job *current_job = NULL;
 
     if (loaded_jobs == NULL)
     {
         free(file_contents);
+        file_contents = NULL;
+        
         return SCHEDR_ERROR_ALLOCATION_FAILED;
     }
 
-    char *word = strtok(file_contents, DEFAULT_DELIM); 
-
-    while (word != NULL)
+    status = parse_file_contents(file_contents, &loaded_jobs, &jobs_count, expected_jobs_len);
+    
+    free(file_contents);
+    
+    if (status == SCHEDR_SUCCESS)
     {
-        if (jobs_count > expected_jobs_len)
-        {
-            free(file_contents);
-            free(loaded_jobs);
-            return SCHEDR_ERROR_CONFIG_FORMAT;
-        }
-
-        if (strncmp("Job", word, MAX_WORD_LEN) == 0)
-        {
-            current_job = &(loaded_jobs[jobs_count]);
-            schedr_job_init(current_job);
-            jobs_count++;
-
-            word = strtok(NULL, NAME_DELIM); 
-
-            if (word == NULL)
-            {
-                free(file_contents);
-                free(loaded_jobs);
-                return SCHEDR_ERROR_CONFIG_FORMAT;
-            }
-            else
-            {
-                schedr_job_set_name(current_job, word, strlen(word));
-            }
-        }
-
-        else if (strncmp("run", word, MAX_WORD_LEN) == 0)
-        {
-            if (current_job != NULL)
-            {
-                word = strtok(NULL, CMD_DELIM);
-                
-                if (word == NULL)
-                {
-                    free(file_contents);
-                    free(loaded_jobs);
-                    return SCHEDR_ERROR_CONFIG_FORMAT;
-                }
-                else
-                {
-                    schedr_job_set_command(current_job, word, strlen(word));
-                }
-            }
-        }
-
-        else if (strncmp("every", word, MAX_WORD_LEN) == 0)
-        {
-            if (current_job != NULL)
-            {
-                int seconds = 0;
-                char *tok = strtok(NULL, DEFAULT_DELIM);
-                char val[12];
-                char unit[20];
-
-                if (tok == NULL)
-                {
-                    free(file_contents);
-                    free(loaded_jobs);
-                    return SCHEDR_ERROR_CONFIG_FORMAT;
-                }
-                else if (is_unit(tok)) 
-                {
-                    strncpy(unit, tok, sizeof (unit) - 1);
-                    strncpy(val, "1", 2);
-                }
-                else if (is_digit(tok))
-                {
-                    strncpy(val, tok, sizeof (val) - 1);
-                    tok = strtok(NULL, DEFAULT_DELIM);
-
-                    if (tok == NULL)
-                    {
-                        free(file_contents);
-                        free(loaded_jobs);
-                        return SCHEDR_ERROR_CONFIG_FORMAT;
-                    }
-                    else if (is_unit(tok))
-                    {
-                        strncpy(unit, tok, sizeof (unit) - 1);
-                    }
-                    else 
-                    {
-                        free(file_contents);
-                        free(loaded_jobs);
-                        return SCHEDR_ERROR_CONFIG_FORMAT;
-                    }
-                }
-                else
-                {
-                    free(file_contents);
-                    free(loaded_jobs);
-                    return SCHEDR_ERROR_CONFIG_FORMAT;
-                }
-
-                seconds = atoi(val);
-
-                if (( strcmp("s", unit) == 0 || strcmp("sec", unit) == 0 
-                   || strcmp("second", unit) == 0) || strcmp("seconds", unit) == 0)
-                {
-                    seconds = seconds * 1;
-                }
-                else if (( strcmp("m", unit) == 0 || strcmp("min", unit) == 0 
-                   || strcmp("minute", unit) == 0) || strcmp("minutes", unit) == 0)
-                {
-                    seconds = seconds * 60;
-                }
-                else if (( strcmp("h", unit) == 0 || strcmp("hour", unit) == 0 || strcmp("hours", unit) == 0))
-                {
-                    seconds = seconds * 3600;
-                }
-                else
-                {
-                    free(file_contents);
-                    free(loaded_jobs);
-                    return SCHEDR_ERROR_CONFIG_FORMAT;
-                }
-
-                schedr_job_set_interval(current_job, seconds);
-            }
-        }
-        else
-        {
-            free(file_contents);
-            free(loaded_jobs);
-            return SCHEDR_ERROR_CONFIG_FORMAT;
-        }
-
-        if (word != NULL)
-        {
-            word = strtok(NULL, DEFAULT_DELIM);
-        }
+        *jobs = loaded_jobs;
+        *loaded_jobs_count = jobs_count;
+    }
+    else
+    {
+        free(loaded_jobs);
     }
 
-    free(file_contents);
-
-    *jobs = loaded_jobs;
-    *loaded_jobs_count = jobs_count;
-
-    return SCHEDR_SUCCESS;
+    return status;
 }
 
 static bool is_unit(const char *str)
@@ -256,8 +108,27 @@ static bool is_digit(const char *str)
     return true;
 }
 
-static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *number_of_jobs)
+static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs)
 {
+    fseek(fp, 0, SEEK_END);
+    size_t file_len = ftell(fp);
+    rewind(fp);
+
+    *file_contents = (char *)allocator(file_len + 1);
+    
+    if (*file_contents == NULL) 
+    {
+        fclose(fp);
+        return SCHEDR_ERROR_ALLOCATION_FAILED;
+    }
+
+    fread(*file_contents, sizeof (char), file_len, fp);
+    
+    // TODO: handle fread error
+    
+    fclose(fp);
+    (*file_contents)[file_len] = '\0';
+    
     static const char NEW_LINE[] = "\r\n";
     static const size_t JOB_LEN = 3;
 
@@ -267,10 +138,14 @@ static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *
     
     if (cpy == NULL)
     {
+        free(*file_contents);
+        *file_contents = NULL;
+        fclose(fp);
+        
         return SCHEDR_ERROR_ALLOCATION_FAILED;
     }
 
-    strncpy(cpy, file_contents, file_len + 1);
+    strncpy(cpy, *file_contents, file_len + 1);
     cpy[file_len] = '\0';
 
     char *line = strtok(cpy, NEW_LINE);
@@ -294,3 +169,99 @@ static Status find_number_of_jobs(char *file_contents, size_t file_len, size_t *
     return SCHEDR_SUCCESS;
 }
 
+static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *jobs_count, int expected_jobs_len)
+{
+    static const char DEFAULT_DELIM[] = " \t\r\n\v\f";
+    static const char NAME_DELIM[] = "\"";
+    static const char CMD_DELIM[] = "`";
+    
+    Job *job_list = *loaded_jobs;
+    Job *current_job = NULL;
+    char *word = strtok(file_contents, DEFAULT_DELIM); 
+
+    while (word != NULL)
+    {
+        if (*jobs_count > expected_jobs_len)
+        {
+            return SCHEDR_ERROR_CONFIG_FORMAT;
+        }
+
+        if (strncmp("Job", word, MAX_WORD_LEN) == 0)
+        {
+            current_job = &(job_list[*jobs_count]);
+            schedr_job_init(current_job);
+            (*jobs_count)++;
+
+            word = strtok(NULL, NAME_DELIM); 
+
+            if (word == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
+            else { schedr_job_set_name(current_job, word, strlen(word)); }
+        }
+
+        else if (strncmp("run", word, MAX_WORD_LEN) == 0)
+        {
+            if (current_job != NULL)
+            {
+                word = strtok(NULL, CMD_DELIM);
+                
+                if (word == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
+                else { schedr_job_set_command(current_job, word, strlen(word)); }
+            }
+        }
+
+        else if (strncmp("every", word, MAX_WORD_LEN) == 0)
+        {
+            if (current_job != NULL)
+            {
+                int seconds = 0;
+                char *tok = strtok(NULL, DEFAULT_DELIM);
+                char val[12];
+                char unit[20];
+
+                if (tok == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
+                else if (is_unit(tok)) 
+                {
+                    strncpy(unit, tok, sizeof (unit) - 1);
+                    strncpy(val, "1", 2);
+                }
+                else if (is_digit(tok))
+                {
+                    strncpy(val, tok, sizeof (val) - 1);
+                    tok = strtok(NULL, DEFAULT_DELIM);
+
+                    if (tok == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
+                    else if (is_unit(tok)) { strncpy(unit, tok, sizeof (unit) - 1); }
+                    else { return SCHEDR_ERROR_CONFIG_FORMAT; }
+                }
+                else { return SCHEDR_ERROR_CONFIG_FORMAT; }
+
+                seconds = atoi(val);
+
+                if (( strcmp("s", unit) == 0 || strcmp("sec", unit) == 0 
+                   || strcmp("second", unit) == 0) || strcmp("seconds", unit) == 0)
+                {
+                    seconds = seconds * 1;
+                }
+                else if (( strcmp("m", unit) == 0 || strcmp("min", unit) == 0 
+                   || strcmp("minute", unit) == 0) || strcmp("minutes", unit) == 0)
+                {
+                    seconds = seconds * 60;
+                }
+                else if (( strcmp("h", unit) == 0 || strcmp("hour", unit) == 0 || strcmp("hours", unit) == 0))
+                {
+                    seconds = seconds * 3600;
+                }
+                else { return SCHEDR_ERROR_CONFIG_FORMAT; }
+
+                schedr_job_set_interval(current_job, seconds);
+            }
+        }
+        else { return SCHEDR_ERROR_CONFIG_FORMAT; }
+
+        if (word != NULL) { word = strtok(NULL, DEFAULT_DELIM); }
+    }
+    
+    *loaded_jobs = job_list;
+    
+    return SCHEDR_SUCCESS;
+}

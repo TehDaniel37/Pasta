@@ -224,7 +224,7 @@ static void load_jobs_should_return_failure_when_unlikely_open_file_error_occurs
 
 static void load_jobs_should_load_config_file_case_insensitive() 
 {
-    static const char TEST_CONF[] = "test_mixed_case";
+    static const char TEST_CONF[] = "test_mixed_case.conf";
     static const char TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
     
     static const int expected_len = 3;
@@ -241,7 +241,7 @@ static void load_jobs_should_load_config_file_case_insensitive()
     
     Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_mixed_case);
     
-    ssct_assert_equals(expected_len, jobs_len);
+    ssct_assert_equals(jobs_len, expected_len);
     ssct_assert_true(job_arrays_equal(expected_jobs, expected_len, jobs, jobs_len));
     ssct_assert_equals(status, SCHEDR_SUCCESS);
     

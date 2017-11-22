@@ -5,11 +5,10 @@
 #include <stdbool.h>                // bool, true, false
 #include <sys/stat.h>               // fstat()
 #include <errno.h>                  // errno
+#include <ctype.h>                   // tolower()
 
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
-
-static const size_t MAX_WORD_LEN = 1000;
 
 static void (*on_number_of_jobs_found_hook)(int expected_jobs) = NULL;
 
@@ -19,6 +18,7 @@ static bool is_unit(const char *str);
 static bool is_digit(const char *str);
 static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs);
 static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *jobs_count, int expected_jobs_len);
+static bool str_equals_ign_case(const char *str_1, const char *str2);
 
 #ifdef TEST
 void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
@@ -83,17 +83,18 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
 
 static bool is_unit(const char *str)
 {
-    if (( strcmp("s", str) == 0 || strcmp("sec", str) == 0 
-       || strcmp("second", str) == 0) || strcmp("seconds", str) == 0)
+    if (str_equals_ign_case("s", str) || str_equals_ign_case("sec", str)
+        || str_equals_ign_case("second", str) || str_equals_ign_case("seconds", str))
     {
         return true;
     }
-    else if (( strcmp("m", str) == 0 || strcmp("min", str) == 0 
-       || strcmp("minute", str) == 0) || strcmp("minutes", str) == 0)
+    else if (str_equals_ign_case("m", str) || str_equals_ign_case("min", str)
+        || str_equals_ign_case("minute", str) || str_equals_ign_case("minutes", str))
     {
         return true;
     }
-    else if (( strcmp("h", str) == 0 || strcmp("hour", str) == 0 || strcmp("hours", str) == 0))
+    else if (str_equals_ign_case("h", str) || str_equals_ign_case("hour", str) 
+        || str_equals_ign_case("hours", str))
     {
         return true;
     }
@@ -139,7 +140,6 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
     (*file_contents)[file_len] = '\0';
     
     static const char NEW_LINE[] = "\r\n";
-    static const size_t JOB_LEN = 3;
 
     size_t result = 0;
 
@@ -150,7 +150,7 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
 
     while (line != NULL)
     {
-        if (strncmp("Job", line, JOB_LEN) == 0) { result++; }
+        if (str_equals_ign_case("Job", line)) { result++; }
 
         line = strtok(NULL, NEW_LINE);
     }
@@ -184,7 +184,7 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
             return SCHEDR_ERROR_CONFIG_FORMAT;
         }
 
-        if (strncmp("Job", word, MAX_WORD_LEN) == 0)
+        if (str_equals_ign_case("Job", word))
         {
             current_job = &(job_list[*jobs_count]);
             schedr_job_init(current_job);
@@ -196,7 +196,7 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
             else { schedr_job_set_name(current_job, word, strlen(word)); }
         }
 
-        else if (strncmp("run", word, MAX_WORD_LEN) == 0)
+        else if (str_equals_ign_case("run", word))
         {
             if (current_job != NULL)
             {
@@ -207,7 +207,7 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
             }
         }
         // TODO: Refactor crap code below 
-        else if (strncmp("every", word, MAX_WORD_LEN) == 0)
+        else if (str_equals_ign_case("every", word))
         {
             if (current_job != NULL)
             {
@@ -235,17 +235,18 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
 
                 seconds = atoi(val);
 
-                if (( strcmp("s", unit) == 0 || strcmp("sec", unit) == 0 
-                   || strcmp("second", unit) == 0) || strcmp("seconds", unit) == 0)
+                if (str_equals_ign_case("s", unit) || str_equals_ign_case("sec", unit) 
+                    || str_equals_ign_case("second", unit) || str_equals_ign_case("seconds", unit))
                 {
                     seconds = seconds * 1;
                 }
-                else if (( strcmp("m", unit) == 0 || strcmp("min", unit) == 0 
-                   || strcmp("minute", unit) == 0) || strcmp("minutes", unit) == 0)
+                else if (str_equals_ign_case("m", unit) || str_equals_ign_case("min", unit) 
+                    || str_equals_ign_case("minute", unit) || str_equals_ign_case("minutes", unit))
                 {
                     seconds = seconds * 60;
                 }
-                else if (( strcmp("h", unit) == 0 || strcmp("hour", unit) == 0 || strcmp("hours", unit) == 0))
+                else if (str_equals_ign_case("h", unit) || str_equals_ign_case("hour", unit) 
+                    || str_equals_ign_case("hours", unit))
                 {
                     seconds = seconds * 3600;
                 }
@@ -262,4 +263,17 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
     *loaded_jobs = job_list;
     
     return SCHEDR_SUCCESS;
+}
+
+static bool str_equals_ign_case(const char *str_1, const char *str_2)
+{
+    for (int i = 0; str_1[i]; i++)
+    {
+        if (tolower(str_1[i]) != tolower(str_2[i]))
+        {
+            return false;
+        }
+    }
+    
+    return true;
 }

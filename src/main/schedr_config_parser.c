@@ -1,16 +1,17 @@
-#include <stdio.h>                  // FILE, fopen(), fclose(), fread()
+#include <stdio.h>                  // FILE, fopen(), fclose(), fread(), fileno()
 #include <stdlib.h>
 #include <stddef.h>
-#include <string.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include <errno.h>
-#include <stdio.h>                  // fileno
+#include <string.h>                 // strncmp
+#include <stdbool.h>                // bool, true, false
+#include <sys/stat.h>               // fstat()
+#include <errno.h>                  // errno
 
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
 
 static const size_t MAX_WORD_LEN = 1000;
+
+static void (*on_number_of_jobs_found_hook)(int expected_jobs) = NULL;
 
 static void *(*allocator)(size_t bytes) = malloc;
 
@@ -22,6 +23,8 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
 #ifdef TEST
 void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
 void schedr_config_reset_allocator() { allocator = malloc; }
+void schedr_config_set_on_number_of_jobs_found_hook(void (*hook)(int expected_jobs)) { on_number_of_jobs_found_hook = hook; }
+void schedr_config_remove_on_number_of_jobs_found_hook() { on_number_of_jobs_found_hook = NULL; }
 #endif
 
 Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *filepath)
@@ -47,6 +50,8 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
     Status status = find_number_of_jobs(file_p, &file_contents, &expected_jobs_len);
 
     if (status != SCHEDR_SUCCESS) { return status; }
+
+    if (on_number_of_jobs_found_hook != NULL ) { on_number_of_jobs_found_hook(expected_jobs_len); }
 
     int jobs_count = 0;
     Job *loaded_jobs = (Job *)allocator(sizeof (Job) * expected_jobs_len);
@@ -118,8 +123,9 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
     if (S_ISDIR(st.st_mode)) { return SCHEDR_ERROR_INVALID_ARGUMENT; }
 
     *file_contents = (char *)allocator(file_len + 1);
+    char *cpy = (char *)allocator(file_len + 1);
     
-    if (*file_contents == NULL) 
+    if (*file_contents == NULL || cpy == NULL) 
     {
         fclose(fp);
         return SCHEDR_ERROR_ALLOCATION_FAILED;
@@ -136,17 +142,6 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
     static const size_t JOB_LEN = 3;
 
     size_t result = 0;
-    
-    char *cpy = (char *)allocator(file_len + 1);
-    
-    if (cpy == NULL)
-    {
-        free(*file_contents);
-        *file_contents = NULL;
-        fclose(fp);
-        
-        return SCHEDR_ERROR_ALLOCATION_FAILED;
-    }
 
     strncpy(cpy, *file_contents, file_len + 1);
     cpy[file_len] = '\0';
@@ -211,7 +206,7 @@ static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *j
                 else { schedr_job_set_command(current_job, word, strlen(word)); }
             }
         }
-
+        // TODO: Refactor crap code below 
         else if (strncmp("every", word, MAX_WORD_LEN) == 0)
         {
             if (current_job != NULL)

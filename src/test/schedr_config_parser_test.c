@@ -128,6 +128,8 @@ static void load_jobs_should_return_config_format_error()
     ssct_assert_equals(status, SCHEDR_ERROR_CONFIG_FORMAT);
 }
 
+static void hook_on_number_of_jobs_found(int jobs) { schedr_config_set_allocator(mock_allocator_will_return_null); }
+
 static void load_jobs_should_return_allocation_failed_error()
 {
     static const char TEST_CONF[] = "test_default.conf";
@@ -141,12 +143,20 @@ static void load_jobs_should_return_allocation_failed_error()
 
     Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf);
 
+    ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
+
+    schedr_config_reset_allocator();
+    
+    schedr_config_set_on_number_of_jobs_found_hook(hook_on_number_of_jobs_found);
+    status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf);
+
     free(test_conf);
     free(jobs);
 
-    schedr_config_reset_allocator();
-
     ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
+    
+    schedr_config_reset_allocator();
+    schedr_config_remove_on_number_of_jobs_found_hook();
 }
 
 static void load_jobs_should_return_permission_denied_error()

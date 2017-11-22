@@ -13,6 +13,8 @@
 #ifdef TEST
 void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes));
 void schedr_config_reset_allocator();
+void schedr_config_set_on_number_of_jobs_found_hook(void (*hook)(int expected_jobs));
+void schedr_config_remove_on_number_of_jobs_found_hook();
 #endif
 
 /*

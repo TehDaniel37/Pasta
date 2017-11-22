@@ -1,3 +1,1 @@
-# Schedr
-
-![Coverage](./doc/coverage.svg)
+# Schedr <img align="right" src="./doc/coverage.svg">

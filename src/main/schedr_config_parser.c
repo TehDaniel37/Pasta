@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdio.h>                  // fileno
 
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
@@ -36,7 +37,7 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
     {
         if (errno == EACCES) { return SCHEDR_ERROR_PERMISSION_DENIED; }
         if (errno == ENOENT) { return SCHEDR_ERROR_FILE_NOT_FOUND; }
-
+        
         return SCHEDR_FAILURE;
     }
 
@@ -110,9 +111,11 @@ static bool is_digit(const char *str)
 
 static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs)
 {
-    fseek(fp, 0, SEEK_END);
-    size_t file_len = ftell(fp);
-    rewind(fp);
+    struct stat st;
+    fstat(fileno(fp), &st);
+    size_t file_len = st.st_size;
+
+    if (S_ISDIR(st.st_mode)) { return SCHEDR_ERROR_INVALID_ARGUMENT; }
 
     *file_contents = (char *)allocator(file_len + 1);
     

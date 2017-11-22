@@ -184,9 +184,9 @@ static void load_jobs_should_return_no_jobs_warning()
     free(jobs);
 }
 
-static void load_jobs_should_return_failure_when_file_is_directory()
+static void load_jobs_should_return_invalid_argument_error_when_file_is_directory()
 {
-    static const char CONF_THAT_IS_DIR[] = "test_dir";
+    static const char CONF_THAT_IS_DIR[] = "conf_dir";
     static const int CONF_THAT_IS_DIR_LEN = sizeof (CONF_THAT_IS_DIR) - 1;
     
     char *test_conf_dir = get_test_resource(CONF_THAT_IS_DIR, CONF_THAT_IS_DIR_LEN);
@@ -195,7 +195,7 @@ static void load_jobs_should_return_failure_when_file_is_directory()
     
     Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_dir);
     
-    ssct_assert_equals(status, SCHEDR_FAILURE);
+    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);
 }
 
 int main(void) 
@@ -207,7 +207,7 @@ int main(void)
     ssct_run(load_jobs_should_return_allocation_failed_error);
     ssct_run(load_jobs_should_return_permission_denied_error);
     ssct_run(load_jobs_should_return_no_jobs_warning);
-    ssct_run(load_jobs_should_return_failure_when_file_is_directory);
+    ssct_run(load_jobs_should_return_invalid_argument_error_when_file_is_directory);
 
     ssct_print_summary();
 

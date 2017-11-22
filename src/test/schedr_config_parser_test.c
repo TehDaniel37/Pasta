@@ -222,6 +222,33 @@ static void load_jobs_should_return_failure_when_unlikely_open_file_error_occurs
     ssct_assert_equals(status, SCHEDR_FAILURE);
 }
 
+static void load_jobs_should_load_config_file_case_insensitive() 
+{
+    static const char TEST_CONF[] = "test_mixed_case";
+    static const char TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    
+    static const int expected_len = 3;
+    
+    static const Job expected_jobs[] = {
+        {.name = "all lowercase", .command = "echo 'lowercase'", .interval_seconds = 10, .state = Stopped },
+        {.name = "ALL UPPERCASE", .command = "echo 'AAAAAHHHHHH'", .interval_seconds = 600, .state = Stopped },
+        {.name = "MiXeD CaSe", .command = "echo 'MiXeD CaSe'", .interval_seconds = 3600, .state = Stopped }
+    };
+    
+    char *test_conf_mixed_case = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    Job *jobs = NULL;
+    int jobs_len = 0;
+    
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_mixed_case);
+    
+    ssct_assert_equals(expected_len, jobs_len);
+    ssct_assert_true(job_arrays_equal(expected_jobs, expected_len, jobs, jobs_len));
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
+    
+    free(jobs);
+    free(test_conf_mixed_case);
+}
+
 int main(void) 
 {
     ssct_run(load_jobs_should_load_correct_values);
@@ -233,6 +260,7 @@ int main(void)
     ssct_run(load_jobs_should_return_no_jobs_warning);
     ssct_run(load_jobs_should_return_invalid_argument_error_when_file_is_directory);
     ssct_run(load_jobs_should_return_failure_when_unlikely_open_file_error_occurs);
+    ssct_run(load_jobs_should_load_config_file_case_insensitive);
 
     ssct_print_summary();
 

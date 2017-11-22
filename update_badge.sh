@@ -21,7 +21,7 @@ elif (( $coverage < 95 ))
 then
     color="green"
 else
-    color="lightgreen"
+    color="brightgreen"
 fi
 
 url=https://img.shields.io/badge/${badge_name}-${coverage}%25-${color}.svg\?style=for-the-badge

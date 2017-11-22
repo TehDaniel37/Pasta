@@ -79,14 +79,12 @@ build: create_dirs $(objects)
 $(object_dir)/%.o: $(src_dir)/%.c $(headers)
 	$(CC) $(CFLAGS) -I $(include_dir) -c $< -o $@
 
-# Calculate code coverage. Runs tests 10 times to ensure correct coverage data
+# Calculate code coverage.
 .PHONY: cov
 cov: CFLAGS=$(test_flags)
 cov: clean create_dirs $(ssct_h) $(test_targets)
-	for i in `seq 1 10` ; do \
-		for target in $(test_targets) ; do \
-			./$$target &>/dev/null ; \
-		done \
+	for target in $(test_targets) ; do \
+		./$$target &>/dev/null ; \
 	done
 	gcovr -r $(test_deps_dir)
 
@@ -102,7 +100,7 @@ test: create_dirs $(ssct_h) $(test_targets)
 memcheck: CFLAGS=$(test_flags)
 memcheck: create_dirs $(test_targets)
 	for target in $(test_targets) ; do \
-		valgrind -q --log-fd=2 --track-origins=yes --leak-check=full $$target &>/dev/null ; \
+		valgrind -q --log-fd=2 --track-origins=yes --leak-check=full $$target >/dev/null ; \
 	done
 
 # Link and run each test

@@ -195,7 +195,21 @@ static void load_jobs_should_return_invalid_argument_error_when_file_is_director
     
     Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_dir);
     
-    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);
+    ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);    
+}
+
+static void load_jobs_should_return_failure_when_unlikely_open_file_error_occurs()
+{
+    static const char TEST_CONF[] = "circular-link.conf";
+    static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
+    
+    char *test_conf_circular_link = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    Job *jobs = NULL;
+    int jobs_len = 0;
+    
+    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_circular_link);
+    
+    ssct_assert_equals(status, SCHEDR_FAILURE);
 }
 
 int main(void) 
@@ -208,6 +222,7 @@ int main(void)
     ssct_run(load_jobs_should_return_permission_denied_error);
     ssct_run(load_jobs_should_return_no_jobs_warning);
     ssct_run(load_jobs_should_return_invalid_argument_error_when_file_is_directory);
+    ssct_run(load_jobs_should_return_failure_when_unlikely_open_file_error_occurs);
 
     ssct_print_summary();
 

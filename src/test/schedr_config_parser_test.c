@@ -6,6 +6,25 @@
 #include "schedr_job.h"
 #include "schedr_status_codes.h"
 
+static Job *jobs_actual;
+static int jobs_actual_len;
+static char *conf_file = NULL;
+
+static void setup()
+{
+    jobs_actual = NULL;
+    jobs_actual_len = 0;
+}
+
+static void teardown()
+{
+    schedr_config_reset_allocator();
+    schedr_config_remove_on_number_of_jobs_found_hook();
+    
+    free(jobs_actual);
+    free(conf_file);
+}
+
 static void *mock_allocator_will_return_null(size_t bytes) { return NULL; }
 
 static char *get_test_resource(const char *file_name, size_t len)
@@ -61,19 +80,13 @@ static void load_jobs_should_load_correct_values()
     };
     static const int expected_len = sizeof (expected) / sizeof (Job);
 
-    char *test_config_valid = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *actual = NULL;
-    int actual_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
-    Status status = schedr_config_load_jobs(&actual, &actual_len, test_config_valid);
-
-    free(test_config_valid);
-
-    ssct_assert_equals(actual_len, expected_len);
-    ssct_assert_true(job_arrays_equal(expected, expected_len, actual, actual_len));
-
-    free(actual);
-
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
+    
+    ssct_assert_equals(jobs_actual_len, expected_len);
+    ssct_assert_true(job_arrays_equal(expected, expected_len, jobs_actual, jobs_actual_len));
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
     ssct_assert_equals(status, SCHEDR_SUCCESS);
 }
 
@@ -82,14 +95,11 @@ static void load_jobs_should_return_invalid_argument_error_when_jobs_argument_is
     static const char TEST_CONF[] = "test_default.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     Job not_null;
     Job *not_null_p = &not_null;
-    int not_null_len = 0;
 
-    Status status = schedr_config_load_jobs(&not_null_p, &not_null_len, test_conf);
-
-    free(test_conf);
+    Status status = schedr_config_load_jobs(&not_null_p, &jobs_actual_len, conf_file);
 
     ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);
 }
@@ -99,15 +109,10 @@ static void load_jobs_should_return_file_not_found_error()
     static const char TEST_CONF[] = "non_existant.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf_non_existant = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_non_existant);
-
-    free(test_conf_non_existant);
-    free(jobs);
-
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
+    
     ssct_assert_equals(status, SCHEDR_ERROR_FILE_NOT_FOUND);
 }
 
@@ -116,14 +121,9 @@ static void load_jobs_should_return_config_format_error()
     static const char TEST_CONF[] = "test_incorrect_format.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf_incorrect_format = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_incorrect_format);
-
-    free(test_conf_incorrect_format);
-    free(jobs);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
 
     ssct_assert_equals(status, SCHEDR_ERROR_CONFIG_FORMAT);
 }
@@ -135,28 +135,21 @@ static void load_jobs_should_return_allocation_failed_error()
     static const char TEST_CONF[] = "test_default.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
     schedr_config_set_allocator(mock_allocator_will_return_null);
 
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf);
-
-    ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
 
     schedr_config_reset_allocator();
+    
+    ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
     
     schedr_config_set_on_number_of_jobs_found_hook(hook_on_number_of_jobs_found);
-    status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf);
 
-    free(test_conf);
-    free(jobs);
+    status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
 
     ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
-    
-    schedr_config_reset_allocator();
-    schedr_config_remove_on_number_of_jobs_found_hook();
 }
 
 static void load_jobs_should_return_permission_denied_error()
@@ -164,14 +157,9 @@ static void load_jobs_should_return_permission_denied_error()
     static const char TEST_CONF[] = "test_no_permission.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf_no_permission = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_no_permission);
-
-    free(test_conf_no_permission);
-    free(jobs);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
 
     ssct_assert_equals(status, SCHEDR_ERROR_PERMISSION_DENIED);
 }
@@ -181,17 +169,12 @@ static void load_jobs_should_return_no_jobs_warning()
     static const char TEST_CONF[] = "test_no_jobs.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
 
-    char *test_conf_no_jobs = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_no_jobs);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
 
     ssct_assert_equals(status, SCHEDR_WARNING_NO_JOBS);
-    ssct_assert_zero(jobs_len);
-
-    free(test_conf_no_jobs);
-    free(jobs);
+    ssct_assert_zero(jobs_actual_len);
 }
 
 static void load_jobs_should_return_invalid_argument_error_when_file_is_directory()
@@ -199,11 +182,9 @@ static void load_jobs_should_return_invalid_argument_error_when_file_is_director
     static const char CONF_THAT_IS_DIR[] = "conf_dir";
     static const int CONF_THAT_IS_DIR_LEN = sizeof (CONF_THAT_IS_DIR) - 1;
     
-    char *test_conf_dir = get_test_resource(CONF_THAT_IS_DIR, CONF_THAT_IS_DIR_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(CONF_THAT_IS_DIR, CONF_THAT_IS_DIR_LEN);
     
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_dir);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
     
     ssct_assert_equals(status, SCHEDR_ERROR_INVALID_ARGUMENT);    
 }
@@ -213,11 +194,9 @@ static void load_jobs_should_return_failure_when_unlikely_open_file_error_occurs
     static const char TEST_CONF[] = "circular-link.conf";
     static const int TEST_CONF_LEN = sizeof (TEST_CONF) - 1;
     
-    char *test_conf_circular_link = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
     
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_circular_link);
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
     
     ssct_assert_equals(status, SCHEDR_FAILURE);
 }
@@ -235,22 +214,20 @@ static void load_jobs_should_load_config_file_case_insensitive()
         {.name = "MiXeD CaSe", .command = "echo 'MiXeD CaSe'", .interval_seconds = 3600, .state = Stopped }
     };
     
-    char *test_conf_mixed_case = get_test_resource(TEST_CONF, TEST_CONF_LEN);
-    Job *jobs = NULL;
-    int jobs_len = 0;
+    conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
+
+    Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
     
-    Status status = schedr_config_load_jobs(&jobs, &jobs_len, test_conf_mixed_case);
-    
-    ssct_assert_equals(jobs_len, expected_len);
-    ssct_assert_true(job_arrays_equal(expected_jobs, expected_len, jobs, jobs_len));
+    ssct_assert_equals(jobs_actual_len, expected_len);
+    ssct_assert_true(job_arrays_equal(expected_jobs, expected_len, jobs_actual, jobs_actual_len));
     ssct_assert_equals(status, SCHEDR_SUCCESS);
-    
-    free(jobs);
-    free(test_conf_mixed_case);
 }
 
 int main(void) 
 {
+    ssct_setup = setup;
+    ssct_teardown = teardown;
+    
     ssct_run(load_jobs_should_load_correct_values);
     ssct_run(load_jobs_should_return_invalid_argument_error_when_jobs_argument_is_not_null);
     ssct_run(load_jobs_should_return_file_not_found_error);

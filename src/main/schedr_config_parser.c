@@ -5,7 +5,7 @@
 #include <stdbool.h>                // bool, true, false
 #include <sys/stat.h>               // fstat()
 #include <errno.h>                  // errno
-#include <ctype.h>                   // tolower()
+#include <ctype.h>                  // tolower()
 
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
@@ -49,7 +49,11 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
     
     Status status = find_number_of_jobs(file_p, &file_contents, &expected_jobs_len);
 
-    if (status != SCHEDR_SUCCESS) { return status; }
+    if (status != SCHEDR_SUCCESS) 
+    {
+        free(file_contents); 
+        return status;
+    }
 
     if (on_number_of_jobs_found_hook != NULL ) { on_number_of_jobs_found_hook(expected_jobs_len); }
 

@@ -14,12 +14,28 @@
 #define mock_exec_expected_params "echo 'should call exec'"
 #define mock_sleep_expected_param 3600
 
+const int DEFAULT_WAIT_TIMEOUT = 1000;
+const int MICROSECS_PER_MILLISEC = 1000;
+const int WAIT_MILLISEC = 10;
+
 static bool *mock_exec_called;
 static bool *mock_exec_correct_params;
 static int *times_exec_called;
 static bool *mock_sleep_correct_params;
 static bool *mock_exec_file_exists;
 static bool *mock_exec_file_is_executable;
+
+#define wait_until(expression, timeout) do {                    \
+    int time_waited_millis = 0;                                 \
+                                                                \
+    while (!(expression))                                       \
+    {                                                           \
+        time_waited_millis += WAIT_MILLISEC;                    \
+        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);         \
+                                                                \
+        if (time_waited_millis > timeout) { break; }            \
+    }                                                           \
+} while (false)
 
 /*
  * Credit: slezica
@@ -101,11 +117,6 @@ static void teardown()
 
 static void start_job_should_call_exec_with_correct_params()
 {
-    const int MICROSECS_PER_MILLISEC = 1000;
-    const int WAIT_MILLISEC = 10;
-    const int TIMEOUT_MILLIS = 5000;
-    int time_waited_millis = 0;
-    
     mock_exec_called = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_correct_params = (bool *)create_shared_memory(sizeof (bool));
     *mock_exec_called = false;
@@ -116,13 +127,7 @@ static void start_job_should_call_exec_with_correct_params()
 
     schedr_scheduler_start_job(&job);
     
-    while (!(*mock_exec_called || *mock_exec_correct_params))
-    {
-        time_waited_millis += WAIT_MILLISEC;
-        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
-        
-        if (time_waited_millis > TIMEOUT_MILLIS) { break; }
-    }
+    wait_until(*mock_exec_called && *mock_exec_correct_params, DEFAULT_WAIT_TIMEOUT);
 
     ssct_assert_true(*mock_exec_called);
     ssct_assert_true(*mock_exec_correct_params);
@@ -161,11 +166,6 @@ static void start_job_should_return_fork_failed_error()
 
 static void start_job_should_call_exec_repeatedly()
 {
-    const int MICROSECS_PER_MILLISEC = 1000;
-    const int WAIT_MILLISEC = 10;
-    const int TIMEOUT_MILLIS = 5000;
-    int time_waited_millis = 0;
-    
     Job job = { .name = "Test", .command = "echo", .interval_seconds = 0, .state = Stopped };
     times_exec_called = (int *)create_shared_memory(sizeof (int));
     *times_exec_called = 0;
@@ -174,17 +174,8 @@ static void start_job_should_call_exec_repeatedly()
     
     schedr_scheduler_start_job(&job);
     
-    while (*times_exec_called < 10) 
-    {
-        time_waited_millis += WAIT_MILLISEC;
-        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
-        
-        if (time_waited_millis > TIMEOUT_MILLIS)
-        {
-            break;
-        }
-    }
-
+    wait_until(*times_exec_called >= 10, DEFAULT_WAIT_TIMEOUT);
+    
     ssct_assert_true(*times_exec_called >= 10);
 
     munmap(times_exec_called, sizeof (int));
@@ -208,10 +199,28 @@ static void start_job_should_exec_executable_file_with_absolute_path()
 {
     Job job = { .name = "Test", .command = "/home/danalm/git/schedr/res/debug/test/test_script.sh", .interval_seconds = 0, .state = Stopped };
     
-    const int MICROSECS_PER_MILLISEC = 1000;
-    const int WAIT_MILLISEC = 10;
-    const int TIMEOUT_MILLIS = 5000;
-    int time_waited_millis = 0;
+    mock_exec_file_exists = (bool *)create_shared_memory(sizeof (bool));
+    mock_exec_file_is_executable = (bool *)create_shared_memory(sizeof (bool));
+    *mock_exec_file_exists = false;
+    *mock_exec_file_is_executable = false;
+    
+    schedr_scheduler_set_exec(mock_exec_will_check_if_file_exists_and_is_executable);
+    
+    Status status = schedr_scheduler_start_job(&job);
+    
+    wait_until(*mock_exec_file_exists && *mock_exec_file_is_executable, DEFAULT_WAIT_TIMEOUT);
+    
+    ssct_assert_equals(status, SCHEDR_SUCCESS);
+    ssct_assert_true(*mock_exec_file_exists);
+    ssct_assert_true(*mock_exec_file_is_executable);
+    
+    munmap(mock_exec_file_exists, sizeof (bool));
+    munmap(mock_exec_file_is_executable, sizeof(bool));
+}
+
+static void start_job_should_exec_executable_file_with_relative_path()
+{
+    Job job = { .name = "Test", .command = "test_script.sh", .interval_seconds = 0, .state = Stopped };
     
     mock_exec_file_exists = (bool *)create_shared_memory(sizeof (bool));
     mock_exec_file_is_executable = (bool *)create_shared_memory(sizeof (bool));
@@ -222,23 +231,14 @@ static void start_job_should_exec_executable_file_with_absolute_path()
     
     Status status = schedr_scheduler_start_job(&job);
     
-    while (*mock_exec_file_exists == false || *mock_exec_file_is_executable == false)
-    {
-        time_waited_millis += WAIT_MILLISEC;
-        usleep(MICROSECS_PER_MILLISEC * WAIT_MILLISEC);
-        
-        if (time_waited_millis > TIMEOUT_MILLIS)
-        {
-            break;
-        }
-    }
+    wait_until(*mock_exec_file_exists && *mock_exec_file_is_executable, DEFAULT_WAIT_TIMEOUT);
     
     ssct_assert_equals(status, SCHEDR_SUCCESS);
     ssct_assert_true(*mock_exec_file_exists);
     ssct_assert_true(*mock_exec_file_is_executable);
     
     munmap(mock_exec_file_exists, sizeof (bool));
-    munmap(mock_exec_file_is_executable, sizeof(bool));
+    munmap(mock_exec_file_is_executable, sizeof(bool));    
 }
 
 int main(void)
@@ -253,6 +253,7 @@ int main(void)
     ssct_run(start_job_should_call_exec_repeatedly);
     ssct_run(start_job_should_pass_3600_seconds_to_sleep);
     ssct_run(start_job_should_exec_executable_file_with_absolute_path);
+    ssct_run(start_job_should_exec_executable_file_with_relative_path);
     
     ssct_print_summary();
 

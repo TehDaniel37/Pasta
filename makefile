@@ -13,6 +13,7 @@ test_flags = $(debug_flags) -DTEST --coverage
 # Directories
 debug_target_dir = bin/debug
 release_target_dir = bin/release
+install_dir = /usr/local/bin
 test_target_dir = bin/debug/test
 target_dir = $(debug_target_dir)
 include_dir = src/include
@@ -36,6 +37,14 @@ cov_files := $(patsubst $(test_deps_dir)/%.o, $(test_deps_dir)/%.gcno, $(test_de
 
 .PHONY: all
 all: release 
+
+.PHONY: install
+install: release
+	sudo cp $(release_target_dir)/$(TARGET) $(install_dir)/$(TARGET)
+
+.PHONY: uninstall
+uninstall:
+	sudo rm $(install_dir)/$(TARGET)
 
 .PHONY: release
 release: CFLAGS=$(release_flags)

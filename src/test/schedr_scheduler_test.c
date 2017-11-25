@@ -244,8 +244,8 @@ static void start_job_should_exec_executable_file_with_absolute_path()
 
 static void start_job_should_exec_executable_file_with_relative_path()
 {
-    system("mkdir -p /home/danalm/.config/schedr/bin");
-    system("cp res/debug/test/test_script.sh /home/danalm/.config/schedr/bin");
+    system("mkdir -p $HOME/.config/schedr/bin");
+    system("cp res/debug/test/test_script.sh $HOME/.config/schedr/bin");
     Job job = { .name = "Test", .command = "test_script.sh", .interval_seconds = 0, .state = Stopped };
     
     mock_exec_file_exists = (bool *)create_shared_memory(sizeof (bool));
@@ -283,7 +283,7 @@ static void set_path_should_create_config_dirs_when_they_do_not_exist()
 
 int main(void)
 {
-    system("rm -rf /home/danalm/.config/schedr");
+    system("rm -rf $HOME/.config/schedr");
     ssct_run(set_path_should_create_config_dirs_when_they_do_not_exist);
     
     schedr_scheduler_set_path();

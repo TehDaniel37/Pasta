@@ -5,6 +5,8 @@
 #include <stdbool.h>        // false
 #include <string.h>
 #include <stdio.h>
+#include <linux/limits.h>   // PATH_MAX
+#include <sys/stat.h>       // mkdir()
 
 #include "schedr_scheduler.h"
 
@@ -120,9 +122,30 @@ Status schedr_scheduler_stop_job(Job *job_p)
     return SCHEDR_ERROR_NOT_IMPLEMENTED;
 }
 
+static void create_config_dir()
+{
+    const char *dirs[] = {"/.config", "/schedr", "/bin", NULL};
+    
+    char *home = getenv("HOME");
+    char path[PATH_MAX];
+    int len = strlen(home);
+    
+    strcpy(path, home);
+    path[len] = '\0';
+    
+    for (int i = 0; dirs[i] != NULL; i++)
+    {
+        strcat(path, dirs[i]);
+        len += strlen(dirs[i]);
+        path[len] = '\0';
+        mkdir(path, 0755);
+    }
+}
+
 void schedr_scheduler_set_path()
 {
-    system("mkdir -p /home/danalm/.config/schedr/bin");
+    create_config_dir();
+    
     const char *path_ext = "/.config/schedr/bin/";
     const char *seperator = ":";
     char *old_path = getenv("PATH");

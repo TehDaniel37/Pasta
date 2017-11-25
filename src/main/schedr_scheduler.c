@@ -4,7 +4,6 @@
 #include <sys/wait.h>       // waitpid()
 #include <stdbool.h>        // false
 #include <string.h>
-#include <stdio.h>
 #include <linux/limits.h>   // PATH_MAX
 #include <sys/stat.h>       // mkdir()
 
@@ -146,7 +145,7 @@ Status schedr_scheduler_start_job(Job *const job_p)
         started_jobs[started_jobs_count].job = job_p;
         started_jobs[started_jobs_count].pid = job_pid;
         started_jobs_count++;
-         
+        
         return parent_proc(job_p);
     }
     
@@ -175,12 +174,21 @@ Status schedr_scheduler_stop_job(Job *const job_p)
     if (index != -1) 
     { 
         pid_t pid = started_jobs[index].pid;
-        
+      
         kill(started_jobs[index].pid, SIGTERM);
         waitpid(pid, NULL, 0);
         
         started_jobs[index].job = NULL;
         started_jobs[index].pid = 0;
+        
+        if (index != started_jobs_count - 1)
+        {
+            for (int i = index; i < started_jobs_count - 1; i++)
+            {
+                started_jobs[i] = started_jobs[i + 1];
+            }
+        }
+        
         started_jobs_count--;
     }
     

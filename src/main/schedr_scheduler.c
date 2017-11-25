@@ -101,7 +101,7 @@ static Status parent_proc(Job *job_p)
     return SCHEDR_SUCCESS;
 }
 
-Status schedr_scheduler_start_job(Job *job_p)
+Status schedr_scheduler_start_job(Job *const job_p)
 {
     pid_t job_pid;
 
@@ -117,9 +117,11 @@ Status schedr_scheduler_start_job(Job *job_p)
     return SCHEDR_FAILURE; // GCOVR_EXCL_LINE (will never be executed)
 }
 
-Status schedr_scheduler_stop_job(Job *job_p)
+Status schedr_scheduler_stop_job(Job *const job_p)
 {
-    return SCHEDR_ERROR_NOT_IMPLEMENTED;
+    job_p->state = Stopped;
+    
+    return SCHEDR_SUCCESS;
 }
 
 static void create_config_dir()

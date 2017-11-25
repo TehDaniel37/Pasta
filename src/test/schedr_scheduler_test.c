@@ -316,6 +316,8 @@ static void stop_job_should_stop_process_associated_with_job()
     }
     else
     {
+        wait_until(kill(child_pid, 0) == 0, DEFAULT_WAIT_TIMEOUT);
+        
         schedr_scheduler_associate_pid_with_jod(&job, child_pid);
         schedr_scheduler_stop_job(&job);
         

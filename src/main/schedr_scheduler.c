@@ -19,9 +19,8 @@ static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = exe
 static int (*forker)(void) = fork;
 static unsigned int (*sleeper)(unsigned int seconds) = sleep;
 
-static pid_t temp_child_pid;
-
-struct JobProcMap {
+struct JobProcMap 
+{
     Job *job;
     pid_t pid;
 };
@@ -37,13 +36,30 @@ void schedr_scheduler_set_forker(int (*fork_func)(void)) { forker = fork_func; }
 void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
-void schedr_scheduler_kill_children() { kill(temp_child_pid, SIGTERM); }
+
+void schedr_scheduler_kill_children() 
+{
+    for (int i = started_jobs_count - 1; i >= 0; i--)
+    {
+        pid_t pid = started_jobs[i].pid;
+        
+        kill(started_jobs[i].pid, SIGTERM);
+        waitpid(pid, NULL, 0);
+        
+        started_jobs[i].job = NULL;
+        started_jobs[i].pid = 0;
+    }
+    
+    started_jobs_count = 0;
+}
+
 void schedr_scheduler_associate_pid_with_jod(Job *const job, pid_t pid) 
 { 
     started_jobs[started_jobs_count].job = job;
     started_jobs[started_jobs_count].pid = pid;
     started_jobs_count++;
 }
+
 void __gcov_flush();
 #endif
 
@@ -127,7 +143,9 @@ Status schedr_scheduler_start_job(Job *const job_p)
     else if (job_pid == 0) { child_proc(job_p); }
     else 
     {
-        temp_child_pid = job_pid;
+        started_jobs[started_jobs_count].job = job_p;
+        started_jobs[started_jobs_count].pid = job_pid;
+        started_jobs_count++;
          
         return parent_proc(job_p);
     }

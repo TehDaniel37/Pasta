@@ -37,4 +37,6 @@ Status schedr_scheduler_start_job(Job *const job_p);
  */
 Status schedr_scheduler_stop_job(Job *const job_p);
 
+void schedr_scheduler_set_path();
+
 #endif /* SCHEDR_SCHEDULER_H */

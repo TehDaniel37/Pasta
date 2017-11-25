@@ -4,6 +4,7 @@
 #include <sys/wait.h>       // waitpid()
 #include <stdbool.h>        // false
 #include <string.h>
+#include <stdio.h>
 
 #include "schedr_scheduler.h"
 
@@ -30,7 +31,7 @@ static void cmd_proc(Job *job_p)
 {
     char *shell = getenv("SHELL");
     char *argv[] = { shell, "-c", job_p->command, NULL };
-    
+
     #ifdef TEST
     __gcov_flush();
     #endif
@@ -117,4 +118,21 @@ Status schedr_scheduler_start_job(Job *job_p)
 Status schedr_scheduler_stop_job(Job *job_p)
 {
     return SCHEDR_ERROR_NOT_IMPLEMENTED;
+}
+
+void schedr_scheduler_set_path()
+{
+    const char *path_ext = "/home/danalm/.config/schedr/bin/";
+    const char *seperator = ":";
+    char *old_path = getenv("PATH");
+    int len = strlen(path_ext) + strlen(seperator) + strlen(old_path);
+    char *new_path = (char *)malloc(len + 1);
+    
+    strcpy(new_path, old_path);
+    strcat(new_path, seperator);
+    strcat(new_path, path_ext);
+    new_path[len] = '\0';
+    
+    setenv("PATH", new_path, true);
+    free(new_path);
 }

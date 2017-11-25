@@ -76,8 +76,21 @@ static int mock_exec_will_check_if_file_exists_and_is_executable(const char *fil
 {
     struct stat file_stat;
     char *file = argv[2];
+    const char *prefix = "command -v ";
+    int len = strlen(file) + strlen(prefix);
+    char *popen_cmd = (char *)malloc(sizeof (char) * len + 1);
+    strcpy(popen_cmd, prefix);
+    strcat(popen_cmd, file);
+    popen_cmd[len] = '\0';
+    char buf[200];
     
-    if (stat(file, &file_stat) == 0) 
+    FILE *fp = popen(popen_cmd, "r");
+    
+    int out_len = fread(buf, sizeof (char), 200, fp);
+    buf[out_len - 1] = '\0';
+    pclose(fp);
+    
+    if (stat(buf, &file_stat) == 0) 
     {
         *mock_exec_file_exists = true;
         
@@ -87,6 +100,7 @@ static int mock_exec_will_check_if_file_exists_and_is_executable(const char *fil
         }
     }
     
+    free(popen_cmd);
     _exit(EXIT_FAILURE);
 }
 
@@ -243,6 +257,8 @@ static void start_job_should_exec_executable_file_with_relative_path()
 
 int main(void)
 {
+    schedr_scheduler_set_path();
+    
     ssct_setup = setup;
     ssct_teardown = teardown;
 

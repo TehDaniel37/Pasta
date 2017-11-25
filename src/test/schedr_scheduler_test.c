@@ -281,9 +281,19 @@ static void set_path_should_create_config_dirs_when_they_do_not_exist()
     ssct_assert_true(file_exists(config_bin_dir));
 }
 
+static void stop_job_should_set_state_to_stopped()
+{
+    Job job = { .name = "Test", .command = "echo", .interval_seconds = 0, .state = Running };
+    
+    schedr_scheduler_stop_job(&job);
+    
+    ssct_assert_equals(job.state, Stopped);
+}
+
 int main(void)
 {
     system("rm -rf $HOME/.config/schedr");
+    
     ssct_run(set_path_should_create_config_dirs_when_they_do_not_exist);
     
     schedr_scheduler_set_path();
@@ -299,6 +309,8 @@ int main(void)
     ssct_run(start_job_should_pass_3600_seconds_to_sleep);
     ssct_run(start_job_should_exec_executable_file_with_absolute_path);
     ssct_run(start_job_should_exec_executable_file_with_relative_path);
+    
+    ssct_run(stop_job_should_set_state_to_stopped);
     
     ssct_print_summary();
 

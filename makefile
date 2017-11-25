@@ -14,6 +14,9 @@ test_flags = $(debug_flags) -DTEST --coverage
 debug_target_dir = bin/debug
 release_target_dir = bin/release
 install_dir = /usr/local/bin
+config_dir = $(HOME)/.config/schedr
+config_bin_dir = $(HOME)/.config/schedr/bin
+config_file = schedr.conf
 test_target_dir = bin/debug/test
 target_dir = $(debug_target_dir)
 include_dir = src/include
@@ -43,6 +46,8 @@ install: release
 	@if ! ldconfig -p | grep "libc.so.6" >/dev/null ; then \
 		echo "Needed library 'libc.so.6' is not installed. Please install it and try again." ; \
 	else \
+		mkdir -p $(config_bin_dir) ; \
+		touch $(config_dir)/$(config_file) ; \
 		sudo cp $(release_target_dir)/$(TARGET) $(install_dir)/$(TARGET) ; \
 	fi
 

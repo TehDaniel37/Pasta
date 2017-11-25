@@ -26,6 +26,7 @@ void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
 void schedr_scheduler_kill_children() { kill(temp_child_pid, SIGTERM); }
+void schedr_scheduler_associate_pid_with_jod(const Job *const job, pid_t pid) { }
 void __gcov_flush();
 #endif
 

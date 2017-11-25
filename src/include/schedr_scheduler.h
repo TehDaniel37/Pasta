@@ -19,6 +19,7 @@ void schedr_scheduler_reset_forker();
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds));
 void schedr_scheduler_reset_sleeper();
 void schedr_scheduler_kill_children();
+void schedr_scheduler_associate_pid_with_jod(const Job *const job, pid_t pid);
 #endif
 
 /*

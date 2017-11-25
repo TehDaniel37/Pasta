@@ -114,6 +114,16 @@ static int mock_exec_will_check_if_file_exists_and_is_executable(const char *fil
     _exit(EXIT_FAILURE);
 }
 
+static void will_wait_forever()
+{
+    while (true)
+    {
+        sleep(1);
+    }
+    
+    _exit(EXIT_FAILURE);
+}
+
 static pid_t mock_fork_will_fail(void) { return -1; }
 
 static unsigned int mock_sleep(unsigned int seconds) 
@@ -290,6 +300,31 @@ static void stop_job_should_set_state_to_stopped()
     ssct_assert_equals(job.state, Stopped);
 }
 
+static void stop_job_should_stop_process_associated_with_job()
+{
+    Job job = { .name = "Test", .command = "echo", .interval_seconds = 0, .state = Running };
+    
+    pid_t child_pid;
+    
+    if ((child_pid = fork()) < 0)
+    {
+        ssct_fail();
+    }
+    if (child_pid == 0)
+    {
+        will_wait_forever();
+    }
+    else
+    {
+        schedr_scheduler_associate_pid_with_jod(&job, child_pid);
+        schedr_scheduler_stop_job(&job);
+        
+        wait_until(kill(child_pid, 0) < 0 && errno == ESRCH, DEFAULT_WAIT_TIMEOUT);
+        
+        ssct_assert_true(kill(child_pid, 0) < 0 && errno == ESRCH);
+    }
+}
+
 int main(void)
 {
     system("rm -rf $HOME/.config/schedr");
@@ -311,6 +346,7 @@ int main(void)
     ssct_run(start_job_should_exec_executable_file_with_relative_path);
     
     ssct_run(stop_job_should_set_state_to_stopped);
+    ssct_run(stop_job_should_stop_process_associated_with_job);
     
     ssct_print_summary();
 

@@ -12,11 +12,23 @@
 
 extern char *environ[];
 
+#define MAX_RUNNING_JOBS 100
+static int started_jobs_count = 0;
+
 static int (*exec)(const char *fn, char *const argv[], char *const envp[]) = execve;
 static int (*forker)(void) = fork;
 static unsigned int (*sleeper)(unsigned int seconds) = sleep;
 
 static pid_t temp_child_pid;
+
+struct JobProcMap {
+    Job *job;
+    pid_t pid;
+};
+
+typedef struct JobProcMap JobProcMap;
+
+static JobProcMap started_jobs[MAX_RUNNING_JOBS];
 
 #ifdef TEST
 void schedr_scheduler_set_exec(int (*exec_func)(const char *fn, char *const argv[], char *const envp[])) { exec = exec_func; }
@@ -26,7 +38,12 @@ void schedr_scheduler_reset_forker() { forker = fork; }
 void schedr_scheduler_set_sleeper(unsigned int (*sleep_func)(unsigned int seconds)) { sleeper = sleep_func; }
 void schedr_scheduler_reset_sleeper() { sleeper = sleep; }
 void schedr_scheduler_kill_children() { kill(temp_child_pid, SIGTERM); }
-void schedr_scheduler_associate_pid_with_jod(const Job *const job, pid_t pid) { }
+void schedr_scheduler_associate_pid_with_jod(Job *const job, pid_t pid) 
+{ 
+    started_jobs[started_jobs_count].job = job;
+    started_jobs[started_jobs_count].pid = pid;
+    started_jobs_count++;
+}
 void __gcov_flush();
 #endif
 
@@ -118,9 +135,36 @@ Status schedr_scheduler_start_job(Job *const job_p)
     return SCHEDR_FAILURE; // GCOVR_EXCL_LINE (will never be executed)
 }
 
+static int find_job_index(const Job *const job_p)
+{
+    for (int i = started_jobs_count - 1; i >= 0; i--)
+    {
+        if (started_jobs[i].job == job_p)
+        {
+            return i;
+        }
+    }
+    
+    return -1;
+}
+
 Status schedr_scheduler_stop_job(Job *const job_p)
 {
     job_p->state = Stopped;
+    
+    int index = find_job_index(job_p);
+    
+    if (index != -1) 
+    { 
+        pid_t pid = started_jobs[index].pid;
+        
+        kill(started_jobs[index].pid, SIGTERM);
+        waitpid(pid, NULL, 0);
+        
+        started_jobs[index].job = NULL;
+        started_jobs[index].pid = 0;
+        started_jobs_count--;
+    }
     
     return SCHEDR_SUCCESS;
 }

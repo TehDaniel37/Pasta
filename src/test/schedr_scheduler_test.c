@@ -319,9 +319,10 @@ static void stop_job_should_stop_process_associated_with_job()
         schedr_scheduler_associate_pid_with_jod(&job, child_pid);
         schedr_scheduler_stop_job(&job);
         
-        wait_until(kill(child_pid, 0) < 0 && errno == ESRCH, DEFAULT_WAIT_TIMEOUT);
+        wait_until((kill(child_pid, 0) < 0) && errno == ESRCH, DEFAULT_WAIT_TIMEOUT);
         
-        ssct_assert_true(kill(child_pid, 0) < 0 && errno == ESRCH);
+        ssct_assert_true((kill(child_pid, 0) < 0) && errno == ESRCH);
+        kill(child_pid, SIGTERM);
     }
 }
 

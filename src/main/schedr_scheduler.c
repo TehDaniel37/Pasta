@@ -9,8 +9,6 @@
 
 #include "schedr_scheduler.h"
 
-extern char *environ[];
-
 #define MAX_RUNNING_JOBS 100
 static int started_jobs_count = 0;
 

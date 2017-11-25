@@ -9,6 +9,8 @@
 #include <schedr_job.h>
 #include <schedr_status_codes.h>
 
+extern char **environ;
+
 #ifdef TEST
 #include <sys/types.h>
 

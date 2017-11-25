@@ -24,7 +24,7 @@ static char *get_config_path()
     return config_path;
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     char *config_path = get_config_path();
     Job *jobs = NULL;

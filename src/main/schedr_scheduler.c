@@ -122,14 +122,16 @@ Status schedr_scheduler_stop_job(Job *job_p)
 
 void schedr_scheduler_set_path()
 {
-    const char *path_ext = "/home/danalm/.config/schedr/bin/";
+    const char *path_ext = "/.config/schedr/bin/";
     const char *seperator = ":";
     char *old_path = getenv("PATH");
-    int len = strlen(path_ext) + strlen(seperator) + strlen(old_path);
+    char *home = getenv("HOME");
+    int len = strlen(path_ext) + strlen(seperator) + strlen(old_path) + strlen(home);
     char *new_path = (char *)malloc(len + 1);
     
     strcpy(new_path, old_path);
     strcat(new_path, seperator);
+    strcat(new_path, home);
     strcat(new_path, path_ext);
     new_path[len] = '\0';
     

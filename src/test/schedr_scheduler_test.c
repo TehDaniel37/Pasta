@@ -14,7 +14,7 @@
 #define mock_exec_expected_params "echo 'should call exec'"
 #define mock_sleep_expected_param 3600
 
-const int DEFAULT_WAIT_TIMEOUT = 1000;
+const int DEFAULT_WAIT_TIMEOUT = 5000;
 const int MICROSECS_PER_MILLISEC = 1000;
 const int WAIT_MILLISEC = 10;
 

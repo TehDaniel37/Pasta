@@ -40,11 +40,17 @@ all: release
 
 .PHONY: install
 install: release
-	sudo cp $(release_target_dir)/$(TARGET) $(install_dir)/$(TARGET)
+	@if ! ldconfig -p | grep "libc.so.6" >/dev/null ; then \
+		echo "Needed library 'libc.so.6' is not installed. Please install it and try again." ; \
+	else \
+		sudo cp $(release_target_dir)/$(TARGET) $(install_dir)/$(TARGET) ; \
+	fi
 
 .PHONY: uninstall
 uninstall:
-	sudo rm $(install_dir)/$(TARGET)
+	@if [[ -f $(install_dir)/$(TARGET) ]] ; then \
+		sudo rm $(install_dir)/$(TARGET) ; \
+	fi
 
 .PHONY: release
 release: CFLAGS=$(release_flags)

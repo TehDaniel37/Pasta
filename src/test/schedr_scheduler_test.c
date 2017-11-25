@@ -48,6 +48,16 @@ static void *create_shared_memory(size_t bytes)
     return mmap(NULL, bytes, protection, visibility, 0, 0);
 }
 
+static int file_exists(const char *path)
+{
+    struct stat file_stat;
+    
+    int status = stat(path, &file_stat);
+    
+    if (status < 0 && errno == ENOENT) { return false; }
+    else { return true; }
+}
+
 static int mock_exec_will_verify_params(const char *file_name, char *const argv[], char *const envp[])
 {
     *mock_exec_called = true;
@@ -234,6 +244,8 @@ static void start_job_should_exec_executable_file_with_absolute_path()
 
 static void start_job_should_exec_executable_file_with_relative_path()
 {
+    system("mkdir -p /home/danalm/.config/schedr/bin");
+    system("cp res/debug/test/test_script.sh /home/danalm/.config/schedr/bin");
     Job job = { .name = "Test", .command = "test_script.sh", .interval_seconds = 0, .state = Stopped };
     
     mock_exec_file_exists = (bool *)create_shared_memory(sizeof (bool));
@@ -255,8 +267,25 @@ static void start_job_should_exec_executable_file_with_relative_path()
     munmap(mock_exec_file_is_executable, sizeof(bool));    
 }
 
+static void set_path_should_create_config_dirs_when_they_do_not_exist()
+{
+    const char config_dir[] = "/home/danalm/.config/schedr";
+    const char config_bin_dir[] = "/home/danalm/.config/schedr/bin";
+    
+    ssct_assert_false(file_exists(config_dir));
+    ssct_assert_false(file_exists(config_bin_dir));
+    
+    schedr_scheduler_set_path();
+    
+    ssct_assert_true(file_exists(config_dir));
+    ssct_assert_true(file_exists(config_bin_dir));
+}
+
 int main(void)
 {
+    system("rm -rf /home/danalm/.config/schedr");
+    ssct_run(set_path_should_create_config_dirs_when_they_do_not_exist);
+    
     schedr_scheduler_set_path();
     
     ssct_setup = setup;

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="14.2">
+  <zoom_level>10</zoom_level>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>370</x>
+      <y>270</y>
+      <w>280</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>Module
+-
++ name : string
++ interval : number
++ command: string
++ state: Running|Stopped
+-
+fontsize=12</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>370</x>
+      <y>100</y>
+      <w>280</w>
+      <h>80</h>
+    </coordinates>
+    <panel_attributes>Scheduler
+-
+- modules : Module[*]
+-
++ start_module(module : Module) : bool
++ stop_module(module : Module) : void
+
+fontsize=12
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>130</x>
+      <y>110</y>
+      <w>180</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>Starts and stops modules.
+
+bg=yellow
+fontsize=12</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>370</x>
+      <y>480</y>
+      <w>280</w>
+      <h>60</h>
+    </coordinates>
+    <panel_attributes>ConfigParser
+-
+-
++ load_modules(filepath : string) : Module[*] 
+
+fontsize=12</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>130</x>
+      <y>270</y>
+      <w>190</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>Describes a Module.
+ 
+Contains the following info:
+
+- Command to run
+- Module configuration options
+- Running state
+
+bg=yellow
+fontsize=12</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLNote</id>
+    <coordinates>
+      <x>130</x>
+      <y>450</y>
+      <w>190</w>
+      <h>110</h>
+    </coordinates>
+    <panel_attributes>Reads and parses 
+configurations for 
+the program and for modules
+from config file.
+
+bg=yellow
+fontsize=12</panel_attributes>
+    <additional_attributes/>
+  </element>
+</diagram>

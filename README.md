@@ -1,4 +1,4 @@
-# Schedr
+# Schedr <img align="right" src="./doc/tests.svg"> <img align="right" src="./doc/coverage.svg">
 Schedr is a work-in-progress program for scheduling commands/jobs on Linux. Commands can be schedule to run at an interval (e.g. `every minute`), run at specific times (e.g. `every friday at 12 am`) or in response to events (e.g. ``when `nmcli device monitor` outputs ".*: connected" ``)
 
 What sets Schedr apart from similar project, [(see Similar Projects)](#similar-projects), is a focus on expressive, easy to read DSL syntax as well as scheduling of commands in response to events. For example, here is a Schedr job which runs a backup of your home directory every wednesday at noon:

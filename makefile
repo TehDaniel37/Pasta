@@ -43,7 +43,7 @@ all: release
 
 .PHONY: install
 install: release
-	@if ! ldconfig -p | grep "libc.so.6" >/dev/null ; then \
+	@if ! /sbin/ldconfig -p | grep "libc.so.6" >/dev/null ; then \
 		echo "Needed library 'libc.so.6' is not installed. Please install it and try again." ; \
 	else \
 		mkdir -p $(config_bin_dir) ; \
@@ -53,7 +53,7 @@ install: release
 
 .PHONY: uninstall
 uninstall:
-	@if [[ -f $(install_dir)/$(TARGET) ]] ; then \
+	@if [ -f $(install_dir)/$(TARGET) ] ; then \
 		sudo rm $(install_dir)/$(TARGET) ; \
 	fi
 

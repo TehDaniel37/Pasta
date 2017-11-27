@@ -15,21 +15,21 @@ Main->ConfigParser: load(filepath)
 activate ConfigParser
 ConfigParser->ConfigParser: open(filepath)
 ConfigParser->ConfigParser: parse general configurations
-loop for module in file
-    ConfigParser->ConfigParser: parse module configuration
-    create Module
-    ConfigParser->Module: <<create>>
+loop for job in file
+    ConfigParser->ConfigParser: parse job configuration
+    create Job 
+    ConfigParser->Job: <<create>>
 
 end
-Main<--ConfigParser: modules
+Main<--ConfigParser: jobs
 deactivate ConfigParser
 
-loop for Module in modules
-    Main->Scheduler: start_module(module)
+loop for Job in jobs 
+    Main->Scheduler: start_job(job)
 
     activate Scheduler
     Scheduler->Scheduler: start new process
-    Scheduler->Scheduler: run module command
+    Scheduler->Scheduler: run job command
     Main<--Scheduler: true
     deactivate Scheduler
 

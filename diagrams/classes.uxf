@@ -9,7 +9,7 @@
       <w>280</w>
       <h>110</h>
     </coordinates>
-    <panel_attributes>Module
+    <panel_attributes>Job
 -
 + name : string
 + interval : number
@@ -29,10 +29,10 @@ fontsize=12</panel_attributes>
     </coordinates>
     <panel_attributes>Scheduler
 -
-- modules : Module[*]
+- jobs : Jobs[*]
 -
-+ start_module(module : Module) : bool
-+ stop_module(module : Module) : void
++ start_job(job : Job) : bool
++ stop_job(job : Job) : void
 
 fontsize=12
 </panel_attributes>
@@ -46,7 +46,7 @@ fontsize=12
       <w>180</w>
       <h>60</h>
     </coordinates>
-    <panel_attributes>Starts and stops modules.
+    <panel_attributes>Starts and stops jobs.
 
 bg=yellow
 fontsize=12</panel_attributes>
@@ -63,7 +63,7 @@ fontsize=12</panel_attributes>
     <panel_attributes>ConfigParser
 -
 -
-+ load_modules(filepath : string) : Module[*] 
++ load_jobs(filepath : string) : Job[*] 
 
 fontsize=12</panel_attributes>
     <additional_attributes/>
@@ -76,12 +76,12 @@ fontsize=12</panel_attributes>
       <w>190</w>
       <h>110</h>
     </coordinates>
-    <panel_attributes>Describes a Module.
+    <panel_attributes>Describes a Job.
  
 Contains the following info:
 
 - Command to run
-- Module configuration options
+- Job configuration options
 - Running state
 
 bg=yellow
@@ -98,7 +98,7 @@ fontsize=12</panel_attributes>
     </coordinates>
     <panel_attributes>Reads and parses 
 configurations for 
-the program and for modules
+the program and for jobs
 from config file.
 
 bg=yellow

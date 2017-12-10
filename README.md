@@ -74,6 +74,7 @@ Run `make uninstall` in the folder where Schedr was cloned/downloaded. Alternati
 - _Gcovr_ >= 3.3 (for `make cov`)
 - _Valgrind_ >= 3.13 (for `make memcheck`)
 - _Cppcheck_ >= 1.8.1 (for `make check`)
+- _wget_ >= 1.19.2 (for `make test` / `make test` )
 - _sudo_ (for `make install` / `make uninstall`)
 - _ldconfig_ (for `make install`)
 

@@ -8,3 +8,4 @@ src/include/ssct.h
 schedr.geany
 .vagrant
 *.log
+*.code-workspace

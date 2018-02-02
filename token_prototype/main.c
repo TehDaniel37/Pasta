@@ -17,7 +17,7 @@ typedef struct Job Job;
 struct Token {
     char name[100];
     regex_t *pattern;
-    void (*handler)(Job *, char *);
+    void (*handler)(Job *, char *, int, regmatch_t *);
 };
 
 typedef struct Token Token;
@@ -25,33 +25,87 @@ typedef struct Token Token;
 static Token tokens[MAX_TOKENS];
 static int nr_of_tokens;
 
-static Token create_token(const char *name, const char *pattern, void (*handler)(Job *, char *));
+static Token create_token(const char *name, const char *pattern, void (*handler)(Job *, char *, int, regmatch_t *));
 
-static void job_handler(Job *current_job, char *token)
+static void job_handler(Job *current_job, char *text, int offset, regmatch_t matches[])
 {
-    printf("Matched 'Job'!\t");
+    printf("Matched 'Job'!\n");    
+    
+    int match_start, match_end;
+    int i = 0;
+
+    do 
+    {
+        match_start = matches[i].rm_so;
+        match_end = matches[i].rm_eo;
+
+        printf("Match nr %d:\t%d - %d\n\n", i + 1, match_start, match_end);
+        
+        i = i + 1;
+
+    } while (match_start != -1);
 }
 
-static void interval_handler(Job *current_job, char *token)
+static void interval_handler(Job *current_job, char *text, int offset, regmatch_t matches[])
 {
-    printf("Matched 'interval'!\t");
+    printf("Matched 'interval'!\n");
+
+    int match_start, match_end;
+    int i = 0;
+
+    do 
+    {
+        match_start = matches[i].rm_so;
+        match_end = matches[i].rm_eo;
+
+        printf("Match nr %d:\t%d - %d\n\n", i + 1, match_start, match_end);
+        
+        i = i + 1;
+
+    } while (match_start != -1);
 }
 
-static void command_handler(Job *current_job, char *token)
+static void command_handler(Job *current_job, char *text, int offset, regmatch_t matches[])
 {
-    printf("Matched 'command'!\t");
+    printf("Matched 'command'!\n");
+
+    int match_start, match_end;
+    int i = 0;
+
+    do 
+    {
+        match_start = matches[i].rm_so;
+        match_end = matches[i].rm_eo;
+
+        printf("Match nr %d:\t%d - %d\n\n", i + 1, match_start, match_end);
+        
+        i = i + 1;
+
+    } while (match_start != -1);
 }
 
-static void reaction_handler(Job *current_job, char *token)
+static void reaction_handler(Job *current_job, char *text, int offset, regmatch_t matches[])
 {
-    printf("Matched 'reaction'!\t");
+    printf("Matched 'reaction'!\n");
+
+    int match_start, match_end;
+    int i = 0;
+
+    do 
+    {
+        match_start = matches[i].rm_so;
+        match_end = matches[i].rm_eo;
+
+        printf("Match nr %d:\t%d - %d\n\n", i + 1, match_start, match_end);
+        
+        i = i + 1;
+
+    } while (match_start != -1);
 }
 
 static void init_tokens(void) 
 {
     nr_of_tokens = 0;
-
-    // ^Job\\s+\"(.*)\"\\s+(.*?)(?:\\r*\\n){2}
 
     tokens[0] = create_token("job",
             "^Job\\s+\"([^\"]*)\"\\s+((\n?.)*)",
@@ -70,10 +124,10 @@ static void init_tokens(void)
             reaction_handler);
 }
 
-static Token create_token(const char *name, const char *pattern, void (*handler)(Job *, char *))
+static Token create_token(const char *name, const char *pattern, void (*handler)(Job *, char *, int, regmatch_t *))
 {
     Token result;
-    
+
     strcpy(result.name, name);
     regex_t *regex = (regex_t *)malloc(sizeof (regex_t));
     regcomp(regex, pattern, REG_ICASE | REG_NEWLINE | REG_EXTENDED);
@@ -114,8 +168,8 @@ when `usb_connected.sh` outputs \"true\""};
     Job jobs[10];
     Job *current_job = &(jobs[0]);
 
-    printf("%s\n", lines);
-    int MAX_GROUPS = 5;
+    printf("%s\n\n", lines);
+    int MAX_GROUPS = 20;
 
     for (int i = 0; i < nr_of_tokens; i++)
     {
@@ -124,8 +178,7 @@ when `usb_connected.sh` outputs \"true\""};
 
         while (regexec(tokens[i].pattern, lines + offset, MAX_GROUPS, matches, 0) == 0)
         {
-            tokens[i].handler(current_job, lines);
-            printf("%d - %d\n", offset + matches[2].rm_so, offset + matches[2].rm_eo);
+            tokens[i].handler(current_job, lines + offset, offset, matches);
             offset += matches[0].rm_eo;
         }
     }

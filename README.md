@@ -5,6 +5,9 @@ What sets Schedr apart from [similar projects](#similar-projects) is a focus on 
 
 The program is written in plain C and is developed primarily to learn about processes in Linux as well as Test Driven Development (TDD).
 
+## But why?
+The primary reason for why I started this project was to have a way to script my Linux environment in response to _events_. There are tools that does this, like inotify-tools or acpid, but these are too specialized for certain types of events (say ACPI or file events) for my use-case. There are also other tools for scheduling scripts, like cron or anacron, but these only allow scheduling scripts at intervals or specific times. 
+
 ## MVP Released!
 
 A first MVP version can now be tested. This is a early version that only supports interval type jobs (`every X seconds/minutes/hours`).  

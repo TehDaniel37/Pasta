@@ -1,0 +1,54 @@
+Type Token
+    Regex pattern
+    Function handler
+    Token next
+
+
+exec_regex(text : String, tokens : Array<Token>) 
+    foreach Token token in tokens
+        while regex matches in text
+            token.handler(current_job, matches, token.inner)
+
+
+job_handler(Job job, RegexMatch match, Token inner)
+    job.name = match.first_group
+
+    Array<Token> inner_tokens
+    Token node = inner
+
+    do
+        inner_tokens.append(node)
+    while (node = node.next) != null
+
+    exec_regex inner_tokens
+
+
+command_handler(Job job, RegexMatch match, Token tok)
+    job.command = match.first_group
+    ...
+    
+
+interval_handler(Job job, RegexMatch match, Token tok)
+    job.interval = match.first_group
+    ...
+
+    
+main()
+    job_token = Token {
+        pattern = "^Job\\s+\"([^\"]*)\"\\s+((\n?.)*)",
+        handler = job_handler,
+        next = Token {
+            pattern = "run\\s+`(.*)`",
+            handler = command_handler,
+            next = Token {
+                pattern = "every\\s*([0-9]+)?\\s+(hours|hour|h|minutes|minute|min|m|seconds|second|sec|s)",
+                handler = interval_handler,
+                next = <empty>
+            }
+        }
+    }
+
+    Array<Token> tokens = [ job_token ]
+    text = load_config_file("~/.config/schedr/schedr.conf")
+    exec_regex(text, tokens);
+    ...

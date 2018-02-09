@@ -3,15 +3,17 @@
 ## Iteration 1
 Iteration 1 will implement the following features:
 
+- Reimplement parsing of config file to make it trivial to add new job types and other settings
+
 - Calendar type scheduling of jobs.
 
-> Month format: `every month on <DAY OF MONTH> [at <TIME>]`
+Month format: `every month on <DAY OF MONTH> [at <TIME>]`
 
-> Week format: `every week on <WEEKDAY> [at <TIME>]`
+Week format: `every week on <WEEKDAY> [at <TIME>]`
 
-> Day Format: `every day [at <TIME>]`
+Day Format: `every day [at <TIME>]`
 
-> For example:
+For example:
 
 ```
         `every month on 13th`
@@ -19,9 +21,9 @@ Iteration 1 will implement the following features:
         `every week on thursday`
 ```
 
-> If `at <TIME>` is left out, 8:00 is assumed.
+If `at <TIME>` is left out, 8:00 is assumed.
 
-> If the computer is booted after a scheduled time has passed but not yet been executed, the program should execute the command as soon as possible. However, multiple instances of the same job will not be queued. If for example multiple days has passed since the last scheduled daily job, that job will only run once.
+If the computer is booted after a scheduled time has passed but not yet been executed, the program should execute the command as soon as possible. However, multiple instances of the same job will not be queued. If for example multiple days has passed since the last scheduled daily job, that job will only run once.
 
 - Save last execution of `every` type jobs so the time until next execution is retained between reboots. For example if a job is scheduled to run every 6 hours and the computer shuts down after 3 hours. The next execution of that job will run after 3 hours after boot.
 

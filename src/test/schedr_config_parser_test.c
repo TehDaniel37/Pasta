@@ -83,7 +83,7 @@ static void load_jobs_should_load_correct_values()
     conf_file = get_test_resource(TEST_CONF, TEST_CONF_LEN);
 
     Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
-    
+
     ssct_assert_equals(jobs_actual_len, expected_len);
     ssct_assert_true(job_arrays_equal(expected, expected_len, jobs_actual, jobs_actual_len));
     ssct_assert_equals(status, SCHEDR_SUCCESS);

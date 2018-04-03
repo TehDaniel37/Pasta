@@ -1,0 +1,72 @@
+[
+    {
+        "arguments": [
+            "cc", 
+            "-c", 
+            "-O3", 
+            "-I", 
+            "src/include", 
+            "-o", 
+            "bin/release/schedr", 
+            "src/main/schedr_job.c"
+        ], 
+        "directory": "/home/danalm/git/schedr", 
+        "file": "src/main/schedr_job.c"
+    }, 
+    {
+        "arguments": [
+            "cc", 
+            "-c", 
+            "-O3", 
+            "-I", 
+            "src/include", 
+            "-o", 
+            "bin/release/schedr", 
+            "src/main/main.c"
+        ], 
+        "directory": "/home/danalm/git/schedr", 
+        "file": "src/main/main.c"
+    }, 
+    {
+        "arguments": [
+            "cc", 
+            "-c", 
+            "-O3", 
+            "-I", 
+            "src/include", 
+            "-o", 
+            "bin/release/schedr", 
+            "src/main/schedr_config_parser.c"
+        ], 
+        "directory": "/home/danalm/git/schedr", 
+        "file": "src/main/schedr_config_parser.c"
+    }, 
+    {
+        "arguments": [
+            "cc", 
+            "-c", 
+            "-O3", 
+            "-I", 
+            "src/include", 
+            "-o", 
+            "bin/release/schedr", 
+            "src/main/schedr_scheduler.c"
+        ], 
+        "directory": "/home/danalm/git/schedr", 
+        "file": "src/main/schedr_scheduler.c"
+    }, 
+    {
+        "arguments": [
+            "cc", 
+            "-c", 
+            "-O3", 
+            "-I", 
+            "src/include", 
+            "-o", 
+            "bin/release/schedr", 
+            "src/main/test.c"
+        ], 
+        "directory": "/home/danalm/git/schedr", 
+        "file": "src/main/test.c"
+    }
+]

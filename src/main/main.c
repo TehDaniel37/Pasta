@@ -12,7 +12,8 @@
 
 static char *get_config_path()
 {
-    const char config_file_rel[] = "/.config/schedr/schedr.conf";
+    //const char config_file_rel[] = "/.config/schedr/schedr.conf";
+    const char config_file_rel[] = "/git/schedr/test.conf";
     char *home = getenv("HOME");
     int len = sizeof (config_file_rel) + strlen(home);
     char *config_path = (char *)malloc(sizeof (char) * len);
@@ -38,6 +39,12 @@ int main(int argc, char *argv[])
     // Load jobs from config file
     status = schedr_config_load_jobs(&jobs, &number_of_jobs, config_path);
     free(config_path);
+
+    for (int i = 0; i < number_of_jobs; i++) {
+        printf("Job %d:\nName: %s\nCommand: %s\nInterval: %d\n\n", i, jobs[i].name, jobs[i].command, jobs[i].interval_seconds);
+    }
+
+    exit(1);
     
     if (status != SCHEDR_SUCCESS)
     {

@@ -6,19 +6,21 @@
 #include <sys/stat.h>               // fstat()
 #include <errno.h>                  // errno
 #include <ctype.h>                  // tolower()
+#include <regex.h>
 
 #include "schedr_config_parser.h"
 #include "schedr_job.h"
 
+struct Token {
+    regex_t *pattern;
+    void (*handler)(Job **, char *, regmatch_t *);
+    struct Token *inner_tokens;
+};
+
+typedef struct Token Token;
+
 static void (*on_number_of_jobs_found_hook)(int expected_jobs) = NULL;
-
 static void *(*allocator)(size_t bytes) = malloc;
-
-static bool is_unit(const char *str);
-static bool is_digit(const char *str);
-static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs);
-static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *jobs_count, int expected_jobs_len);
-static bool str_equals_ign_case(const char *str_1, const char *str2);
 
 #ifdef TEST
 void schedr_config_set_allocator(void *(*alloc_func)(size_t bytes)) { allocator = alloc_func; }
@@ -26,6 +28,22 @@ void schedr_config_reset_allocator() { allocator = malloc; }
 void schedr_config_set_on_number_of_jobs_found_hook(void (*hook)(int expected_jobs)) { on_number_of_jobs_found_hook = hook; }
 void schedr_config_remove_on_number_of_jobs_found_hook() { on_number_of_jobs_found_hook = NULL; }
 #endif
+
+static Status load_config_file(FILE *fp, char **file_contents);
+static Status parse_file_contents(char *file_contents);
+static Status init_tokens(Token *tokens);
+static void run_regex(char *lines, Job **current_job, Token tokens[], int nr_of_tokens);
+static Token create_token(const char *pattern, void (*handler)(Job **, char *, regmatch_t *));
+static void job_handler(Job **current_job, char *text, regmatch_t matches[]);
+static void command_handler(Job **current_job, char *text, regmatch_t matches[]);
+static void interval_handler(Job **current_job, char *text, regmatch_t matches[]);
+
+#define MAX_JOBS    64
+#define MAX_TOKENS  32
+
+static Token tokens[MAX_TOKENS];
+static Job *loaded_jobs;
+static int jobs_found;
 
 Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *filepath)
 {
@@ -45,81 +63,28 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
     }
 
     char *file_contents = NULL;
-    size_t expected_jobs_len = 0;
+
+    Status status = load_config_file(file_p, &file_contents);
     
-    Status status = find_number_of_jobs(file_p, &file_contents, &expected_jobs_len);
+    if (status != SCHEDR_SUCCESS) { return status; }
 
-    if (status != SCHEDR_SUCCESS) 
-    {
-        free(file_contents); 
-        return status;
-    }
+    loaded_jobs = (Job *)malloc(sizeof (Job) * MAX_JOBS);
+    jobs_found = 0;
 
-    if (on_number_of_jobs_found_hook != NULL ) { on_number_of_jobs_found_hook(expected_jobs_len); }
-
-    int jobs_count = 0;
-    Job *loaded_jobs = (Job *)allocator(sizeof (Job) * expected_jobs_len);
-
-    if (loaded_jobs == NULL)
-    {
-        free(file_contents);
-        file_contents = NULL;
-        
-        return SCHEDR_ERROR_ALLOCATION_FAILED;
-    }
-
-    status = parse_file_contents(file_contents, &loaded_jobs, &jobs_count, expected_jobs_len);
+    status = parse_file_contents(file_contents);
     
     free(file_contents);
     
     if (status == SCHEDR_SUCCESS)
     {
-        *jobs = loaded_jobs;
-        *loaded_jobs_count = jobs_count;
-    }
-    else
-    {
-        free(loaded_jobs);
+        *jobs = &loaded_jobs[0];
+        *loaded_jobs_count = jobs_found;
     }
 
     return status;
 }
 
-static bool is_unit(const char *str)
-{
-    if (str_equals_ign_case("s", str) || str_equals_ign_case("sec", str)
-        || str_equals_ign_case("second", str) || str_equals_ign_case("seconds", str))
-    {
-        return true;
-    }
-    else if (str_equals_ign_case("m", str) || str_equals_ign_case("min", str)
-        || str_equals_ign_case("minute", str) || str_equals_ign_case("minutes", str))
-    {
-        return true;
-    }
-    else if (str_equals_ign_case("h", str) || str_equals_ign_case("hour", str) 
-        || str_equals_ign_case("hours", str))
-    {
-        return true;
-    }
-
-    return false;
-}
-
-static bool is_digit(const char *str)
-{
-    for (int i = 0; str[i]; i++)
-    {
-        if (str[i] < '0' || str[i] > '9')
-        {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number_of_jobs)
+static Status load_config_file(FILE *fp, char **file_contents)
 {
     struct stat st;
     fstat(fileno(fp), &st);
@@ -128,9 +93,8 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
     if (S_ISDIR(st.st_mode)) { return SCHEDR_ERROR_INVALID_ARGUMENT; }
 
     *file_contents = (char *)allocator(file_len + 1);
-    char *cpy = (char *)allocator(file_len + 1);
     
-    if (*file_contents == NULL || cpy == NULL) 
+    if (*file_contents == NULL) 
     {
         fclose(fp);
         return SCHEDR_ERROR_ALLOCATION_FAILED;
@@ -142,142 +106,117 @@ static Status find_number_of_jobs(FILE *fp, char **file_contents, size_t *number
     
     fclose(fp);
     (*file_contents)[file_len] = '\0';
-    
-    static const char NEW_LINE[] = "\r\n";
-
-    size_t result = 0;
-
-    strncpy(cpy, *file_contents, file_len + 1);
-    cpy[file_len] = '\0';
-
-    char *line = strtok(cpy, NEW_LINE);
-
-    while (line != NULL)
-    {
-        if (str_equals_ign_case("Job", line)) { result++; }
-
-        line = strtok(NULL, NEW_LINE);
-    }
-
-    free(cpy);
-
-    *number_of_jobs = result;
-
-    if (result == 0)
-    {
-        return SCHEDR_WARNING_NO_JOBS;
-    }
 
     return SCHEDR_SUCCESS;
 }
 
-static Status parse_file_contents(char *file_contents, Job **loaded_jobs, int *jobs_count, int expected_jobs_len)
+static Status parse_file_contents(char *file_contents)
 {
-    static const char DEFAULT_DELIM[] = " \t\r\n\v\f";
-    static const char NAME_DELIM[] = "\"";
-    static const char CMD_DELIM[] = "`";
-    
-    Job *job_list = *loaded_jobs;
-    Job *current_job = NULL;
-    char *word = strtok(file_contents, DEFAULT_DELIM); 
-
-    while (word != NULL)
+    if (init_tokens(tokens) != SCHEDR_SUCCESS) 
     {
-        if (*jobs_count > expected_jobs_len)
-        {
-            return SCHEDR_ERROR_CONFIG_FORMAT;
-        }
-
-        if (str_equals_ign_case("Job", word))
-        {
-            current_job = &(job_list[*jobs_count]);
-            schedr_job_init(current_job);
-            (*jobs_count)++;
-
-            word = strtok(NULL, NAME_DELIM); 
-
-            if (word == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
-            else { schedr_job_set_name(current_job, word, strlen(word)); }
-        }
-
-        else if (str_equals_ign_case("run", word))
-        {
-            if (current_job != NULL)
-            {
-                word = strtok(NULL, CMD_DELIM);
-                
-                if (word == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
-                else { schedr_job_set_command(current_job, word, strlen(word)); }
-            }
-        }
-        // TODO: Refactor crap code below 
-        else if (str_equals_ign_case("every", word))
-        {
-            if (current_job != NULL)
-            {
-                int seconds = 0;
-                char *tok = strtok(NULL, DEFAULT_DELIM);
-                char val[12];
-                char unit[20];
-
-                if (tok == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
-                else if (is_unit(tok)) 
-                {
-                    strncpy(unit, tok, sizeof (unit) - 1);
-                    strncpy(val, "1", 2);
-                }
-                else if (is_digit(tok))
-                {
-                    strncpy(val, tok, sizeof (val) - 1);
-                    tok = strtok(NULL, DEFAULT_DELIM);
-
-                    if (tok == NULL) { return SCHEDR_ERROR_CONFIG_FORMAT; }
-                    else if (is_unit(tok)) { strncpy(unit, tok, sizeof (unit) - 1); }
-                    else { return SCHEDR_ERROR_CONFIG_FORMAT; }
-                }
-                else { return SCHEDR_ERROR_CONFIG_FORMAT; }
-
-                seconds = atoi(val);
-
-                if (str_equals_ign_case("s", unit) || str_equals_ign_case("sec", unit) 
-                    || str_equals_ign_case("second", unit) || str_equals_ign_case("seconds", unit))
-                {
-                    seconds = seconds * 1;
-                }
-                else if (str_equals_ign_case("m", unit) || str_equals_ign_case("min", unit) 
-                    || str_equals_ign_case("minute", unit) || str_equals_ign_case("minutes", unit))
-                {
-                    seconds = seconds * 60;
-                }
-                else if (str_equals_ign_case("h", unit) || str_equals_ign_case("hour", unit) 
-                    || str_equals_ign_case("hours", unit))
-                {
-                    seconds = seconds * 3600;
-                }
-                else { return SCHEDR_ERROR_CONFIG_FORMAT; }
-
-                schedr_job_set_interval(current_job, seconds);
-            }
-        }
-        else { return SCHEDR_ERROR_CONFIG_FORMAT; }
-
-        if (word != NULL) { word = strtok(NULL, DEFAULT_DELIM); }
+        exit(EXIT_FAILURE);
     }
-    
-    *loaded_jobs = job_list;
-    
+
+    int nr_of_tokens = 1;
+    Job *current_job = &(loaded_jobs[jobs_found]);
+
+    run_regex(file_contents, &current_job, tokens, nr_of_tokens);
+
     return SCHEDR_SUCCESS;
 }
 
-static bool str_equals_ign_case(const char *str_1, const char *str_2)
+static Status init_tokens(Token *tokens)
 {
-    for (int i = 0; str_1[i]; i++)
+    Token *inner_job_tokens = (Token *)malloc(sizeof (Token) * 2);
+    inner_job_tokens[0] = create_token("run\\s+`(.*)`", command_handler);
+    inner_job_tokens[1] = create_token("every\\s*([0-9]+)?\\s+(hours|hour|h|minutes|minute|min|m|seconds|second|sec|s)", interval_handler);
+
+    tokens[0] = create_token("^Job\\s+\"([^\"]*)\"\\s+((\n?.)*)", job_handler);
+    tokens[0].inner_tokens = inner_job_tokens;
+
+    return SCHEDR_SUCCESS;
+}
+
+static void run_regex(char *lines, Job **current_job, Token tokens[], int nr_of_tokens)
+{
+    int MAX_GROUPS = 20;
+    long offset = 0;
+
+    for (int i = 0; i < nr_of_tokens; i++)
     {
-        if (tolower(str_1[i]) != tolower(str_2[i]))
+        regmatch_t matches[MAX_GROUPS]; 
+
+        while (regexec(tokens[i].pattern, lines + offset, MAX_GROUPS, matches, 0) == 0)
         {
-            return false;
+            tokens[i].handler(current_job, lines + offset, matches);
+            offset += matches[0].rm_eo;
         }
     }
-    
-    return true;
+}
+
+static Token create_token(const char *pattern, void (*handler)(Job **, char *, regmatch_t *)) 
+{
+    Token result;
+
+    regex_t *regex = (regex_t *)malloc(sizeof (regex_t));
+    regcomp(regex, pattern, REG_ICASE | REG_NEWLINE | REG_EXTENDED);
+    result.pattern = regex;
+    result.handler = handler;
+
+    return result;
+}
+
+static void job_handler(Job **current_job, char *text, regmatch_t matches[])
+{
+    schedr_job_init(*current_job);
+    schedr_job_set_name(*current_job, text + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
+
+    int job_text_len = matches[2].rm_eo - matches[2].rm_so;
+    char *job_text = (char *)malloc(job_text_len + 1);
+    strncpy(job_text, text + matches[2].rm_so, job_text_len);
+    job_text[job_text_len] = '\0';
+
+    run_regex(job_text, current_job, tokens[0].inner_tokens, 2);
+    free(job_text);
+
+    jobs_found = jobs_found + 1;
+    *current_job = &(loaded_jobs[jobs_found]);
+}
+
+static void interval_handler(Job **current_job, char *text, regmatch_t matches[])
+{
+    int interval_raw_len = matches[1].rm_eo - matches[1].rm_so;
+    char *interval_raw = (char *)malloc(interval_raw_len + 1);
+    strncpy(interval_raw, text + matches[1].rm_so, interval_raw_len);
+    interval_raw[interval_raw_len] = '\0';
+
+    int interval = atoi(interval_raw);
+    if (interval == 0) 
+    {
+        interval = 1;
+    }
+    free(interval_raw);
+
+    int unit_len = matches[2].rm_eo - matches[2].rm_so;
+    char *unit = (char *)malloc(unit_len + 1);
+    strncpy(unit, text + matches[2].rm_so, unit_len);
+    unit[unit_len] = '\0';
+
+    if (strncmp(unit, "m", 1) == 0) 
+    {
+        interval = interval * 60;
+    } 
+    else if (strncmp(unit, "h", 1) == 0) 
+    {
+        interval = interval * 3600;
+    }
+
+    free(unit);
+
+    schedr_job_set_interval(*current_job, interval);
+}
+
+static void command_handler(Job **current_job, char *text, regmatch_t matches[])
+{
+    schedr_job_set_command(*current_job, text + matches[1].rm_so, matches[1].rm_eo - matches[1].rm_so);
 }

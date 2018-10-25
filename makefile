@@ -106,7 +106,7 @@ cov: clean create_dirs $(ssct_h) $(test_targets)
 	for target in $(test_targets) ; do \
 		./$$target &>/dev/null ; \
 	done
-	gcovr -r $(test_deps_dir)
+	cd $(test_deps_dir) && gcovr -r .
 
 # Run test cases
 .PHONY: test

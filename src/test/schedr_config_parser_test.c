@@ -1,5 +1,7 @@
+#include <stdio.h>          // printf()
 #include <stdlib.h>         // malloc(), EXIT_SUCCESS, EXIT_FAILURE
 #include <string.h>         // strncpy(), strncat()
+#include <stdbool.h>        // bool, true, false
 
 #include "ssct.h"
 #include "schedr_config_parser.h"
@@ -39,7 +41,7 @@ static char *get_test_resource(const char *file_name, size_t len)
         exit(EXIT_FAILURE);
     }
 
-    strncpy(buffer_p, TEST_RES_PATH, sizeof(TEST_RES_PATH));
+    strcpy(buffer_p, TEST_RES_PATH);
     strncat(buffer_p, file_name, len);
 
     return buffer_p;
@@ -86,7 +88,6 @@ static void load_jobs_should_load_correct_values()
 
     ssct_assert_equals(jobs_actual_len, expected_len);
     ssct_assert_true(job_arrays_equal(expected, expected_len, jobs_actual, jobs_actual_len));
-    ssct_assert_equals(status, SCHEDR_SUCCESS);
     ssct_assert_equals(status, SCHEDR_SUCCESS);
 }
 

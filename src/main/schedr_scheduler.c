@@ -193,6 +193,7 @@ Status schedr_scheduler_stop_job(Job *const job_p)
     return SCHEDR_SUCCESS;
 }
 
+// TODO: Should this really be here?
 static void create_config_dir()
 {
     const char *dirs[] = {"/.config", "/schedr", "/bin", NULL};
@@ -213,6 +214,7 @@ static void create_config_dir()
     }
 }
 
+// TODO: Should this really be here?
 void schedr_scheduler_set_path()
 {
     create_config_dir();

@@ -33,7 +33,7 @@ static Status load_config_file(FILE *fp, char **file_contents);
 static Status parse_file_contents(char *file_contents);
 static Status init_tokens(Token *tokens);
 static Status run_regex(char *lines, Job **current_job, Token tokens[], int nr_of_tokens);
-static Token create_token(const char *pattern, Status (*handler)(Job **, char *, regmatch_t *));
+static Status create_token(Token *out, const char *pattern, Status (*handler)(Job **, char *, regmatch_t *));
 static Status job_handler(Job **current_job, char *text, regmatch_t matches[]);
 static Status command_handler(Job **current_job, char *text, regmatch_t matches[]);
 static Status interval_handler(Job **current_job, char *text, regmatch_t matches[]);
@@ -47,10 +47,7 @@ static int jobs_found;
 
 Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *filepath)
 {
-    if (*jobs != NULL)
-    {
-        return SCHEDR_ERROR_INVALID_ARGUMENT;
-    }
+    if (*jobs != NULL) { return SCHEDR_ERROR_INVALID_ARGUMENT; }
 
     FILE *file_p = fopen(filepath, "r");
 
@@ -82,6 +79,8 @@ Status schedr_config_load_jobs(Job *jobs[], int *loaded_jobs_count, const char *
     {
         *jobs = &loaded_jobs[0];
         *loaded_jobs_count = jobs_found;
+
+        if (jobs_found == 0) { return SCHEDR_WARNING_NO_JOBS; }
     }
 
     return status;
@@ -134,13 +133,16 @@ static Status init_tokens(Token *tokens)
 
     if (inner_job_tokens == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
 
-    inner_job_tokens[0] = create_token("run\\s+`(.*)`", command_handler);
-    inner_job_tokens[1] = create_token("every\\s*([0-9]+)?\\s+(hours|hour|h|minutes|minute|min|m|seconds|second|sec|s)", interval_handler);
+    Status status = create_token(&inner_job_tokens[0], "run\\s+`(.*)`", command_handler);
+    if (status != SCHEDR_SUCCESS) { return status; }
 
-    tokens[0] = create_token("^Job\\s+\"([^\"]*)\"\\s+((\n?.)*)", job_handler);
+    status = create_token(&inner_job_tokens[1], "every\\s*([0-9]+)?\\s+(hours|hour|h|minutes|minute|min|m|seconds|second|sec|s)", interval_handler);
+    if (status != SCHEDR_SUCCESS) { return status; }
+
+    status = create_token(&tokens[0], "^Job\\s+\"([^\"]*)\"\\s+((\n?.)*)", job_handler);
     tokens[0].inner_tokens = inner_job_tokens;
 
-    return SCHEDR_SUCCESS;
+    return status;
 }
 
 static Status run_regex(char *lines, Job **current_job, Token tokens[], int nr_of_tokens)
@@ -163,16 +165,15 @@ static Status run_regex(char *lines, Job **current_job, Token tokens[], int nr_o
     return SCHEDR_SUCCESS;
 }
 
-static Token create_token(const char *pattern, Status (*handler)(Job **, char *, regmatch_t *)) 
+static Status create_token(Token *out, const char *pattern, Status (*handler)(Job **, char *, regmatch_t *)) 
 {
-    Token result;
-
     regex_t *regex = (regex_t *)allocator(sizeof (regex_t));
+    if (regex == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     regcomp(regex, pattern, REG_ICASE | REG_NEWLINE | REG_EXTENDED);
-    result.pattern = regex;
-    result.handler = handler;
+    out->pattern = regex;
+    out->handler = handler;
 
-    return result;
+    return SCHEDR_SUCCESS;
 }
 
 static Status job_handler(Job **current_job, char *text, regmatch_t matches[])
@@ -181,6 +182,7 @@ static Status job_handler(Job **current_job, char *text, regmatch_t matches[])
 
     int job_name_len = matches[1].rm_eo - matches[1].rm_so;
     char *job_name = (char *)allocator(job_name_len + 1);
+    if (job_name == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     strncpy(job_name, text + matches[1].rm_so, job_name_len);
     job_name[job_name_len] = '\0';
 
@@ -189,6 +191,7 @@ static Status job_handler(Job **current_job, char *text, regmatch_t matches[])
 
     int job_text_len = matches[2].rm_eo - matches[2].rm_so;
     char *job_text = (char *)allocator(job_text_len + 1);
+    if (job_text == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     strncpy(job_text, text + matches[2].rm_so, job_text_len);
     job_text[job_text_len] = '\0';
 
@@ -196,6 +199,12 @@ static Status job_handler(Job **current_job, char *text, regmatch_t matches[])
     free(job_text);
 
     if (status != SCHEDR_SUCCESS) { return status; }
+
+    if ((*current_job)->name[0] == '\0' 
+            || (*current_job)->command[0] == '\0'
+            || (*current_job)->interval_seconds == 0) {
+        return SCHEDR_ERROR_CONFIG_FORMAT;
+    }
 
     jobs_found = jobs_found + 1;
     *current_job = &(loaded_jobs[jobs_found]);
@@ -207,6 +216,7 @@ static Status interval_handler(Job **current_job, char *text, regmatch_t matches
 {
     int interval_raw_len = matches[1].rm_eo - matches[1].rm_so;
     char *interval_raw = (char *)allocator(interval_raw_len + 1);
+    if (interval_raw == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     strncpy(interval_raw, text + matches[1].rm_so, interval_raw_len);
     interval_raw[interval_raw_len] = '\0';
 
@@ -219,14 +229,15 @@ static Status interval_handler(Job **current_job, char *text, regmatch_t matches
 
     int unit_len = matches[2].rm_eo - matches[2].rm_so;
     char *unit = (char *)allocator(unit_len + 1);
+    if (unit == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     strncpy(unit, text + matches[2].rm_so, unit_len);
     unit[unit_len] = '\0';
 
-    if (strncmp(unit, "m", 1) == 0) 
+    if (tolower(unit[0]) == 'm')
     {
         interval = interval * 60;
     } 
-    else if (strncmp(unit, "h", 1) == 0) 
+    else if (tolower(unit[0]) == 'h')
     {
         interval = interval * 3600;
     }
@@ -242,6 +253,7 @@ static Status command_handler(Job **current_job, char *text, regmatch_t matches[
 {
     int cmd_len = matches[1].rm_eo - matches[1].rm_so;
     char *cmd = (char *)allocator(cmd_len + 1);
+    if (cmd == NULL) { return SCHEDR_ERROR_ALLOCATION_FAILED; }
     strncpy(cmd, text + matches[1].rm_so, cmd_len);
     cmd[cmd_len] = '\0';
 

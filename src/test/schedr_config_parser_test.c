@@ -21,7 +21,6 @@ static void setup()
 static void teardown()
 {
     schedr_config_reset_allocator();
-    schedr_config_remove_on_number_of_jobs_found_hook();
     
     free(jobs_actual);
     free(conf_file);
@@ -129,8 +128,6 @@ static void load_jobs_should_return_config_format_error()
     ssct_assert_equals(status, SCHEDR_ERROR_CONFIG_FORMAT);
 }
 
-static void hook_on_number_of_jobs_found(int jobs) { schedr_config_set_allocator(mock_allocator_will_return_null); }
-
 static void load_jobs_should_return_allocation_failed_error()
 {
     static const char TEST_CONF[] = "test_default.conf";
@@ -141,15 +138,7 @@ static void load_jobs_should_return_allocation_failed_error()
     schedr_config_set_allocator(mock_allocator_will_return_null);
 
     Status status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
-
-    schedr_config_reset_allocator();
     
-    ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
-    
-    schedr_config_set_on_number_of_jobs_found_hook(hook_on_number_of_jobs_found);
-
-    status = schedr_config_load_jobs(&jobs_actual, &jobs_actual_len, conf_file);
-
     ssct_assert_equals(status, SCHEDR_ERROR_ALLOCATION_FAILED);
 }
 

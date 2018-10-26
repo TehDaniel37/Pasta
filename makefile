@@ -112,9 +112,14 @@ cov: clean create_dirs $(ssct_h) $(test_targets)
 .PHONY: test
 test: CFLAGS=$(test_flags)
 test: create_dirs $(ssct_h) $(test_targets)
+	mv $$HOME/.config/schedr $$HOME/.config/schedr.tmp
+
 	for target in $(test_targets) ; do \
 		./$$target ; \
 	done
+
+	rm -rf $$HOME/.config/schedr
+	mv $$HOME/.config/schedr.tmp $$HOME/.config/schedr
 
 .PHONY: memcheck
 memcheck: CFLAGS=$(test_flags)

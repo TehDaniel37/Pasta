@@ -1,4 +1,4 @@
-# Schedr Roadmap
+# Schedr Iteration plan
 
 ## Iteration 2
 Iteration 2 will implement the following features:

@@ -5,5 +5,5 @@ res/debug/test/test_no_permission.conf
 src/include/ssct.h
 .vscode
 *.code-workspace
-schedr.geany
+dodee.geany
 compile_commands.json

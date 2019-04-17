@@ -1,22 +1,22 @@
 CC = gcc
-TARGET = schedr
+TARGET = dodee
 
 # Dependencies
 ssct_h = src/include/ssct.h
-ssct_url = https://github.com/TehDaniel37/ssct.h/raw/master/ssct.h
+ssct_url = https://github.com/almgru/ssct.h/raw/master/ssct.h
 
 # Compiler flags
 debug_flags = -g -Wall -pedantic -Werror
-release_flags = -O3
+release_flags = -O2
 test_flags = $(debug_flags) -DTEST --coverage
 
 # Directories
 debug_target_dir = bin/debug
 release_target_dir = bin/release
 install_dir = /usr/local/bin
-config_dir = $(HOME)/.config/schedr
-config_bin_dir = $(HOME)/.config/schedr/bin
-config_file = schedr.conf
+config_dir = $(HOME)/.config/dodee
+config_bin_dir = $(HOME)/.config/dodee/bin
+config_file = dodee.conf
 test_target_dir = bin/debug/test
 target_dir = $(debug_target_dir)
 include_dir = src/include

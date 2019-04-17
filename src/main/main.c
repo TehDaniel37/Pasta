@@ -5,16 +5,16 @@
 #include <signal.h>
 #include <string.h>
 
-#include "schedr_job.h"
-#include "schedr_scheduler.h"
-#include "schedr_config_parser.h"
-#include "schedr_status_codes.h"
+#include "dodee_task.h"
+#include "dodee_scheduler.h"
+#include "dodee_config_parser.h"
+#include "dodee_status_codes.h"
 
 // TODO: This should not be here
-Status get_config_path(char **config_out)
+DodeeStatus get_config_path(char **config_out)
 {
-    const char home_rel[] = "/.config/schedr/schedr.conf";
-    const char config_home_rel[] = "/schedr/schedr.conf";
+    const char home_rel[] = "/.config/dodee/dodee.conf";
+    const char config_home_rel[] = "/dodee/dodee.conf";
     char *rel = (char *)config_home_rel;
 
     char *config_dir = getenv("XDG_CONFIG_HOME");
@@ -23,7 +23,7 @@ Status get_config_path(char **config_out)
         config_dir = getenv("HOME");
         rel = (char *)home_rel;
 
-        if (config_dir == NULL) { return SCHEDR_FAILURE; }
+        if (config_dir == NULL) { return DODEE_FAILURE; }
     }
 
     int len = sizeof (rel) + strlen(config_dir);
@@ -33,57 +33,57 @@ Status get_config_path(char **config_out)
     strcat(*config_out, rel);
     *(config_out[len]) = '\0';
 
-    return SCHEDR_SUCCESS;
+    return DODEE_SUCCESS;
 }
 
 int main(int argc, char *argv[])
 {
     char *config_path;
-    Job *jobs = NULL;
-    int number_of_jobs = 0;
+    DodeeTask *tasks = NULL;
+    int number_of_tasks = 0;
 
-    Status status = get_config_path(&config_path);
+    DodeeStatus status = get_config_path(&config_path);
 
-    if (status != SCHEDR_FAILURE) {
+    if (status != DODEE_FAILURE) {
         puts("Failed to get config path. Neither HOME or XDG_CONFIG_HOME is set");
-        exit(SCHEDR_FAILURE);
+        exit(DODEE_FAILURE);
     }
     
-    // Append $HOME/.config/schedr/bin to PATH so user defined scripts can be executed
+    // Append $HOME/.config/dodee/bin to PATH so user defined scripts can be executed
     // without using absolute paths
-    schedr_scheduler_set_path();
+    dodee_scheduler_set_path();
     
-    // Load jobs from config file
-    status = schedr_config_load_jobs(&jobs, &number_of_jobs, config_path);
+    // Load tasks from config file
+    status = dodee_config_load_jobs(&tasks, &number_of_tasks, config_path);
     free(config_path);
 
-    if (status != SCHEDR_SUCCESS)
+    if (status != DODEE_SUCCESS)
     {
         printf("Could not load config files. Error code: %d\n", status);
         exit(EXIT_FAILURE);
     }
     
-    // Start the jobs
-    for (int i = 0; i < number_of_jobs; i++)
+    // Start the tasks
+    for (int i = 0; i < number_of_tasks; i++)
     {
-        if ((status = schedr_scheduler_start_job(&(jobs[i]))) != SCHEDR_SUCCESS) 
+        if ((status = dodee_scheduler_start_task(&(tasks[i]))) != DODEE_SUCCESS) 
         {
-            printf("Could not start job nr %d. Error code: %d\n", i + 1, status);
+            printf("Could not start task nr %d. Error code: %d\n", i + 1, status);
             exit(EXIT_FAILURE);
         }
     }
     
     pause();    // Wait for termination signal
     
-    // Stop the jobs before terminating
-    for (int i = 0; i < number_of_jobs; i++)
+    // Stop the tasks before terminating
+    for (int i = 0; i < number_of_tasks; i++)
     {
-        if ((status = schedr_scheduler_stop_job(&(jobs[i]))) != SCHEDR_SUCCESS) 
+        if ((status = dodee_scheduler_stop_task(&(tasks[i]))) != DODEE_SUCCESS) 
         {
-            printf("Could not stop job nr %d. Error code: %d\n", i + 1, status);
+            printf("Could not stop task nr %d. Error code: %d\n", i + 1, status);
             exit(EXIT_FAILURE);
         }
     }
     
-    return SCHEDR_SUCCESS;
+    return DODEE_SUCCESS;
 }

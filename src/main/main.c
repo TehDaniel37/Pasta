@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     // Append $HOME/.config/dodee/bin to PATH so user defined scripts can be executed
     // without using absolute paths
     dodee_scheduler_set_path();
-    
+
     // Load tasks from config file
     status = dodee_config_load_jobs(&tasks, &number_of_tasks, config_path);
     free(config_path);

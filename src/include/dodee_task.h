@@ -5,16 +5,16 @@
  * an interval in seconds for how often it is to run and a state, indicating
  * if it is currently running or stopped.
  */
-#ifndef DODEE_JOB_H
-#define DODEE_JOB_H
+#ifndef DODEE_TASK_H
+#define DODEE_TASK_H
 
 #include <stddef.h> // size_t
 
 #include "dodee_status_codes.h" // Status
 
-#define DODEE_TASK_MAX_NAME_LEN 100
-#define DODEE_TASK_MAX_CMD_LEN 1000
+#define DODEE_TASK_HASH_LEN 32
 #define DODEE_TASK_STATE_VALUES 2
+#define DODEE_TASK_SCRIPT_ARG_LEN 256
 
 enum DodeeTaskState
 {
@@ -24,11 +24,20 @@ enum DodeeTaskState
 
 typedef enum DodeeTaskState DodeeTaskState;
 
+struct DodeeTaskScript
+{
+    FILE *file;
+    char *arguments[DODEE_TASK_SCRIPT_ARG_LEN + 1];
+};
+
+typedef struct DodeeTaskScript DodeeTaskScript;
+
 struct DodeeTask 
 {
-    char name[DODEE_TASK_MAX_NAME_LEN + 1];
-    char command[DODEE_TASK_MAX_CMD_LEN + 1];
-    int interval_seconds;
+    char hash[DODEE_TASK_HASH_LEN + 1];
+    DodeeTaskScript *interval;
+    DodeeTaskScript **events;
+    DodeeTaskScript **actions;
     DodeeTaskState state;
 };
 
@@ -38,42 +47,20 @@ typedef struct DodeeTask DodeeTask;
  * Initializes a task to default values. 
  *
  * Default values are: 
- * name: "", command: "", interval_seconds: 0, state: Stopped
+ * hash: "", interval: NULL, events: NULL, actions: NULL, state: Stopped
  *
  * returns  DODEE_ERROR_NULL_ARGUMENT if 'task_p' is NULL,
  *          DODEE_SUCCESS otherwise
  */
 DodeeStatus dodee_task_init(DodeeTask *const task_p);
 
-/*
- * Sets the name of a task.
- *
- * returns  DODEE_ERROR_NULL_ARGUMENT if 'task_p' or 'name' is NULL,
- *          DODEE_ERROR_INVALID_ARGUMENT if 'name' is empty, 'name_len' is 0 or 'name' contains non printable ASCII symbols
- *          DODEE_ERROR_BUFFER_OVERFLOW if 'name_len' is > DODEE_TASK_MAX_NAME_LEN,
- *          DODEE_SUCCESS otherwise
- */
-DodeeStatus dodee_task_set_name(DodeeTask *const task_p, const char *name, size_t name_len);
+DodeeStatus dodee_task_set_interval(DodeeTask *const task_p, DodeeTaskScript *const interval_p);
 
-/*
- * Sets the command of a task.
- *
- * returns  DODEE_ERROR_NULL_ARGUMENT if 'task_p' or 'name' is NULL,
- *          DODEE_ERROR_INVALID_ARGUMENT if 'command' is empty or 'cmd_len' is 0,
- *          DODEE_ERROR_BUFFER_OVERFLOW if 'cmd_len' is > DODEE_TASK_MAX_CMD_LEN,
- *          DODEE_SUCCESS otherwise
- */
-DodeeStatus dodee_task_set_command(DodeeTask *const task_p, const char *command, size_t cmd_len);
+DodeeStatus dodee_task_add_event(DodeeTask *const task_p, DodeeTaskScript *const event_p);
 
-/*
- * Sets the interval, in seconds, of a task. The interval specifies how often the command associated with a task 
- * should be executed.
- *
- * returns  DODEE_ERROR_NULL_ARGUMENT if 'task_p' is NULL,
- *          DODEE_ERROR_INVALID_ARGUMENT if interval is < 0
- *          DODEE_SUCCESS, otherwise
- */
-DodeeStatus dodee_task_set_interval(DodeeTask *const task_p, int interval);
+DodeeStatus dodee_task_add_action(DodeeTask *const task_p, DodeeTaskScript *const action_p);
+
+DodeeStatus dodee_task_generate_md5sum(DodeeTask *const task_p);
 
 /*
  * Sets the state of a task.
@@ -84,4 +71,4 @@ DodeeStatus dodee_task_set_interval(DodeeTask *const task_p, int interval);
  */
 DodeeStatus dodee_task_set_state(DodeeTask *const task_p, DodeeTaskState state);
 
-#endif /* DODEE_JOB_H */
+#endif /* DODEE_TASK_H */

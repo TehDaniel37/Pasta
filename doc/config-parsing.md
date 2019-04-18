@@ -34,3 +34,4 @@ collect tasks
                             add "script" to "task.events"
                         else if matching script is in directory "*/actions/":
                             add "script" to "task.actions"
+            add "task" to "tasks"
